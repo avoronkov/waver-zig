@@ -1,0 +1,5 @@
+in = sine
+
+melody = @[440.0 660.0]
+
+:4 in melody

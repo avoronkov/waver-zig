@@ -1,0 +1,2 @@
+ins = sine
+:2 ins @[A3 [+ A3 1]]

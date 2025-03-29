@@ -1,0 +1,5 @@
+in = sine | [* input [sin [* 2.0 3.14 time 16.0]]]
+in2 = sine | [* input 0.25]
+
+:4 in [* 220.0 2.0]
+:4 +1 in2 660.0
