@@ -176,47 +176,38 @@ fn evalPlus(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
     const first = try eval(a, ctx, func[0]);
     defer value.free_value(a, first);
     switch (first) {
-        .float => |f| return evalPlusFloat(a, ctx, f, func[1..]),
-        .number => |n| return evalPlusInt(a, ctx, n, func[1..]),
+        .float => |f| return evalPlusType(f64, a, ctx, f, func[1..]),
+        .number => |n| return evalPlusType(i64, a, ctx, n, func[1..]),
         else => return error.badValue,
     }
-
-    var sum: f64 = 0;
-    for (func) |it| {
-        const val =  try eval(a, ctx, it);
-        defer value.free_value(a, val);
-        switch (val) {
-            .float => |f| sum += f,
-            else => return error.badValue,
-        }
-    }
-    return Value{ .float = sum };
 }
 
-fn evalPlusFloat(a: Allocator, ctx: *Context, first:f64, args: []const Literal) EvalError!Value {
+fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: []const Literal) EvalError!Value {
     var sum = first;
     for (args) |it| {
         const val =  try eval(a, ctx, it);
         defer value.free_value(a, val);
         switch (val) {
-            .float => |f| sum += f,
+            .float => |f| if (T == f64) { sum += f; } else return error.badValue,
+            .number => |n| if (T == i64) { sum += n; } else return error.badValue,
+            .list => |l| {
+                if (args.len != 1) {
+                    return error.badValue;
+                }
+                var r = try a.alloc(Value, l.len);
+                for (0.., l) |i, v| {
+                    switch (v) {
+                        .float => |f| if (T == f64) { r[i] = .{ .float = first + f }; } else return error.badValue,
+                        .number => |n| if (T == i64) { r[i] = .{ .number = first + n }; } else return error.badValue,
+                        else => return error.badValue,
+                    }
+                }
+                return .{ .list = r };
+            },
             else => return error.badValue,
         }
     }
-    return Value{ .float = sum };
-}
-
-fn evalPlusInt(a: Allocator, ctx: *Context, first:i64, args: []const Literal) EvalError!Value {
-    var sum = first;
-    for (args) |it| {
-        const val =  try eval(a, ctx, it);
-        defer value.free_value(a, val);
-        switch (val) {
-            .number => |n| sum += n,
-            else => return error.badValue,
-        }
-    }
-    return Value{ .number = sum };
+    return if (T == f64) .{ .float = sum } else .{ .number = sum };
 }
 
 fn evalMultiply(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {

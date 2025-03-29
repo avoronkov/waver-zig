@@ -218,8 +218,7 @@ const ParseError = error{
 };
 
 fn parseAtom(self: *Self) ParseError!Literal {
-    const t = self.lexer.pop();
-    if (t) |tok| {
+    if (self.lexer.pop()) |tok| {
         if (findFuncParser(tok)) |p| {
             return p(self);
         }
@@ -233,6 +232,15 @@ fn parseAtom(self: *Self) ParseError!Literal {
             .left_square_bracket => try self.parseBracketsList(),
             .plus => .plus,
             .multiply => .multiply,
+            .minus => blk: {
+                if (self.lexer.pop()) |t2| {
+                    switch (t2) {
+                        .float => |f| break :blk Literal{ .float = -f },
+                        .number => |n| break :blk Literal{ .number = -n },
+                        else => return error.unexpectedToken,
+                    }
+                } else return error.unexpectedEof;
+            },
             else => {
                 std.debug.print("Unexpected token while parsing atom: {any}\n", .{tok});
                 return error.unexpectedToken;
@@ -243,6 +251,12 @@ fn parseAtom(self: *Self) ParseError!Literal {
 
 fn parseBracketsList(self: *Self) ParseError!Literal {
     var list = ArrayList(Literal){};
+    errdefer {
+        for (list.items) |item| {
+            literal.freeLiteral(self.allocator, item);
+        }
+        list.deinit(self.allocator);
+    }
 
     while (true) {
         if (self.lexer.top()) |t| {
