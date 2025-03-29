@@ -195,7 +195,7 @@ fn parseSignaler(
                 return error.unexpectedToken;
             },
         }
-    
+
     } else {
         return error.unexpectedEof;
     }
@@ -218,6 +218,17 @@ const ParseError = error{
 };
 
 fn parseAtom(self: *Self) ParseError!Literal {
+    const first = try self.parseSingleAtom();
+    if (self.lexer.top()) |tok| {
+        if (tokensEql(tok, .comma)) {
+            self.lexer.drop();
+            return self.parseCommaSeparatedList(first);
+        }
+    }
+    return first;
+}
+
+fn parseSingleAtom(self: *Self) ParseError!Literal {
     if (self.lexer.pop()) |tok| {
         if (findFuncParser(tok)) |p| {
             return p(self);
@@ -247,6 +258,33 @@ fn parseAtom(self: *Self) ParseError!Literal {
             },
         };
     } else return error.unexpectedEof;
+}
+
+fn parseCommaSeparatedList(self: *Self, first: Literal) ParseError!Literal {
+    var list = ArrayList(Literal){};
+    errdefer {
+        for (list.items) |item| {
+            literal.freeLiteral(self.allocator, item);
+        }
+        list.deinit(self.allocator);
+    }
+
+    try list.append(self.allocator, first);
+    while (true) {
+        const item = try self.parseSingleAtom();
+        try list.append(self.allocator, item);
+
+        if (self.lexer.top()) |t| {
+            if (t != .comma) {
+                break;
+            } else {
+                self.lexer.drop();
+            }
+        } else {
+            break;
+        }
+    } else return error.unexpectedEof;
+    return .{ .list = try list.toOwnedSlice(self.allocator) };
 }
 
 fn parseBracketsList(self: *Self) ParseError!Literal {
