@@ -75,6 +75,7 @@ allocator: Allocator,
 lexer: Lexer,
 mtime: i128,
 definedVars: std.ArrayListUnmanaged(primitives.Ident) = .{},
+definedFuncs: std.BufSet,
 seqCounters: i64 = 0,
 
 pub fn parseFile(a: Allocator, file: []const u8) !Program {
@@ -95,12 +96,14 @@ pub fn init(a: Allocator, file: []const u8) !Self {
         .allocator = a,
         .lexer = lexer,
         .mtime = stat.mtime,
+        .definedFuncs = std.BufSet.init(a),
     };
 }
 
 pub fn deinit(self: *Self) void {
     self.lexer.deinit();
     self.definedVars.deinit(self.allocator);
+    self.definedFuncs.deinit();
 }
 
 pub fn parse(self: *Self) !Program {
@@ -161,6 +164,9 @@ fn isIdentKnown(self: *const Self, ident: []const u8) bool {
         if (std.mem.eql(u8, v.string() , ident)) {
             return true;
         }
+    }
+    if (self.definedFuncs.contains(ident)) {
+        return true;
     }
     return false;
 }
@@ -237,7 +243,18 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
             return at;
         }
         return switch (tok) {
-            .ident => |i| Literal{ .ident = i },
+            .ident => |i| blk: {
+                if (self.definedFuncs.contains(i.string())) {
+                    const arg = try self.parseAtom();
+                    var list = try self.allocator.alloc(Literal, 3);
+                    errdefer self.allocator.free(list);
+                    list[0] = .func;
+                    list[1] = .{ .ident = i };
+                    list[2] = arg;
+                    return .{ .list = list };
+                }
+                break :blk Literal{ .ident = i };
+            },
             .float => |f| Literal{ .float = f },
             .number => |n| Literal{ .number = n },
             .left_square_bracket => try self.parseBracketsList(),
@@ -363,6 +380,12 @@ fn parseAssignment(
     } else return error.unexpectedEof;
 
     const t2 = self.lexer.pop() orelse return error.unexpectedEof;
+    switch (t2) {
+        .ident => |argname| {
+            return self.parseFunctionAssignment(prog, name, argname);
+        },
+        else => {},
+    }
     if (t2 != .assign) {
         return error.unexpectedToken;
     }
@@ -391,6 +414,18 @@ fn parseAssignment(
     const atom = try self.parseAtom();
     const key = try self.allocator.dupe(u8, name.string());
     try prog.variables.put(self.allocator, key, atom);
+}
+
+fn parseFunctionAssignment(self: *Self, prog: *Program, name: primitives.Ident, argname: primitives.Ident) !void {
+    const t3 = self.lexer.pop() orelse return error.unexpectedEof;
+    if (t3 != .assign) {
+        return error.unexpectedToken;
+    }
+    const raw = try self.parseAtom();
+    const body = try literal.substitute(self.allocator, raw, .{ .ident = argname }, .arg);
+    std.debug.print("prog.functions.put '{s}'\n", .{name.string()});
+    try prog.functions.put(prog.allocator, name.string(), body);
+    try self.definedFuncs.insert(name.string());
 }
 
 fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {

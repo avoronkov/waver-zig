@@ -49,6 +49,7 @@ pub fn deinit(self: *Self) void {
 
 pub fn run(self: *Self) !void {
     self.context.variables = &self.program.variables;
+    self.context.functions = &self.program.functions;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
     var bit: i64 = 0;
     while (bit < 16) {
@@ -107,4 +108,8 @@ fn check_file_modified(self: *Self) !void {
 
     self.program.deinit();
     self.program = prog;
+
+    self.context.variables = &self.program.variables;
+    self.context.functions = &self.program.functions;
+    self.context.scaleFrequencies = self.program.scaleFrequencies;
 }

@@ -17,6 +17,7 @@ instruments: std.StringHashMapUnmanaged(Instrument) = .{},
 signalers: std.ArrayListUnmanaged(Signaler) = .{},
 seqCounters: i64 = 0,
 variables: std.StringHashMapUnmanaged(Literal) = .{},
+functions: std.StringHashMapUnmanaged(Literal) = .{},
 scaleFrequencies: []const f64 = &[_]f64{},
 
 pub fn init(a: Allocator) Self {
@@ -47,4 +48,12 @@ pub fn deinit(self: *Self) void {
         freeLiteral(self.allocator, pair.value_ptr.*);
     }
     self.variables.deinit(self.allocator);
+
+    // deinit functions
+    var funcIter = self.functions.iterator();
+    while (funcIter.next()) |pair| {
+        self.allocator.free(pair.key_ptr.*);
+        freeLiteral(self.allocator, pair.value_ptr.*);
+    }
+    self.functions.deinit(self.allocator);
 }

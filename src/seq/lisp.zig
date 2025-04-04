@@ -81,6 +81,7 @@ fn evalFunc(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value 
         else => std.debug.panic("evalFunc: incorrect funcName argument: {any}", .{ args[0] }),
     };
 
+    std.debug.print("ctx.functions: {any}\n", .{ctx.functions});
     const funcBody = if (ctx.functions) |functions| 
         functions.get(funcName) orelse std.debug.panic("evalFunc unknown function: {s}", .{funcName})
     else std.debug.panic("evalFunc functions undefined", .{});
