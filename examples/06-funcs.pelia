@@ -1,3 +1,3 @@
-maj t = [ + t [0 4 7]]
+maj t = [+ t 0,4,7]
 
 :2 sine maj C4

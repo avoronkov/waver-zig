@@ -74,7 +74,7 @@ const atoms = [_]struct{
 allocator: Allocator,
 lexer: Lexer,
 mtime: i128,
-definedVars: std.ArrayListUnmanaged(primitives.Ident) = .{},
+definedVars: std.BufSet,
 definedFuncs: std.BufSet,
 seqCounters: i64 = 0,
 
@@ -96,13 +96,14 @@ pub fn init(a: Allocator, file: []const u8) !Self {
         .allocator = a,
         .lexer = lexer,
         .mtime = stat.mtime,
+        .definedVars = std.BufSet.init(a),
         .definedFuncs = std.BufSet.init(a),
     };
 }
 
 pub fn deinit(self: *Self) void {
     self.lexer.deinit();
-    self.definedVars.deinit(self.allocator);
+    self.definedVars.deinit();
     self.definedFuncs.deinit();
 }
 
@@ -160,10 +161,8 @@ fn isIdentKnown(self: *const Self, ident: []const u8) bool {
     if (waveform.waveforms.has(ident)) {
         return true;
     }
-    for (self.definedVars.items) |v| {
-        if (std.mem.eql(u8, v.string() , ident)) {
-            return true;
-        }
+    if (self.definedVars.contains(ident)) {
+        return true;
     }
     if (self.definedFuncs.contains(ident)) {
         return true;
@@ -403,7 +402,7 @@ fn parseAssignment(
                     try prog.allocator.dupe(u8, name.string()),
                     inst,
                 );
-                try self.definedVars.append(self.allocator, name);
+                try self.definedVars.insert(name.string());
                 return;
             }
         },
