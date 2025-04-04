@@ -422,9 +422,9 @@ fn parseFunctionAssignment(self: *Self, prog: *Program, name: primitives.Ident, 
         return error.unexpectedToken;
     }
     const raw = try self.parseAtom();
+    defer literal.freeLiteral(self.allocator, raw);
     const body = try literal.substitute(self.allocator, raw, .{ .ident = argname }, .arg);
-    std.debug.print("prog.functions.put '{s}'\n", .{name.string()});
-    try prog.functions.put(prog.allocator, name.string(), body);
+    try prog.functions.put(prog.allocator, try prog.allocator.dupe(u8, name.string()), body);
     try self.definedFuncs.insert(name.string());
 }
 
