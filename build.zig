@@ -26,6 +26,13 @@ pub fn build(b: *std.Build) void {
     exe.linkLibC();
     exe.linkSystemLibrary("libpulse-simple");
 
+    const dwav = b.dependency("wav", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("wav");
+
+    exe.root_module.addImport("wav", dwav);
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
