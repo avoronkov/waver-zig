@@ -1,5 +1,7 @@
 const std = @import("std");
 const wav = @import("wav");
+const Note = @import("./note.zig");
+const EofError = @import("./wave.zig").EofError;
 
 const Allocator = std.mem.Allocator;
 
@@ -7,8 +9,16 @@ pub const Sample = struct {
     allocator: Allocator,
     sample_rate: f64,
     data: []f64,
-    length: usize,
     channels: usize,
+
+    pub fn value(self: Sample, t: f64, note: Note) EofError!f64 {
+        const n: usize = @intFromFloat(t * self.sample_rate);
+        const idx: usize = @intCast(self.channels * n + note.channel);
+        if (idx >= self.data.len) {
+            return error.Eof;
+        }
+        return self.data[idx];
+    }
 };
 
 pub fn parseSampleFile(a: Allocator, filename: []const u8) !Sample {
@@ -28,4 +38,13 @@ pub fn parseSampleFile(a: Allocator, filename: []const u8) !Sample {
             break;
         }
     }
+
+    const sample_rate: f64 = decoder.fmt.sample_rate;
+
+    return .{
+        .allocator = a,
+        .sample_rate = sample_rate,
+        .data = data,
+        .channels = decoder.fmt.channels,
+    };
 }

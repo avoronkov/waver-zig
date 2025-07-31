@@ -11,6 +11,7 @@ const waveform = @import("../waveform.zig");
 const lisp = @import("../seq/lisp.zig");
 const edo12 = @import("../scales/edo12.zig");
 const literal = @import("../seq/literal.zig");
+const wave_input = @import("../wave_input.zig");
 
 
 const Allocator = std.mem.Allocator;
@@ -336,7 +337,8 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
         switch (t) {
             .ident => |id| {
                 if (waveform.waveforms.get(id.string())) |wf| {
-                    const inst = Instrument.init(self.allocator, wf);
+                    const wi = wave_input.WaveInput{ .waveform = wf };
+                    const inst = Instrument.init(self.allocator, wi);
                     if (prog.instruments.get(id.string())) |_| {
                         // Instrument already exists.
                         return;
@@ -395,7 +397,8 @@ fn parseAssignment(
             if (waveform.waveforms.get(id.string())) |wf| {
                 // Instrument assignment
                 self.lexer.drop();
-                var inst = Instrument.init(self.allocator, wf);
+                const wi = wave_input.WaveInput{ .waveform = wf };
+                var inst = Instrument.init(self.allocator, wi);
                 try self.parseInstrumentFilters(&inst);
                 try prog.instruments.put(
                     self.allocator,

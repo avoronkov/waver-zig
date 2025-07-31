@@ -1,5 +1,6 @@
 const std = @import("std");
 const waveform = @import("./waveform.zig");
+const wave_input = @import("./wave_input.zig");
 const filter = @import("./filter.zig");
 const Note = @import("./note.zig");
 const Chain = @import("./chain.zig");
@@ -10,11 +11,13 @@ const Self = @This();
 const Allocator = std.mem.Allocator;
 const Filters = std.ArrayListUnmanaged(filter.Filter);
 
+const WaveInput = wave_input.WaveInput;
+
 allocator: Allocator,
-wf: waveform.WaveForm,
+wf: WaveInput,
 filters: Filters,
 
-pub fn init(a: Allocator, w: waveform.WaveForm) Self {
+pub fn init(a: Allocator, w: WaveInput) Self {
     return .{
         .allocator = a,
         .wf = w,
@@ -53,7 +56,7 @@ pub fn value(self: Self, t: f64, note: Note) EofError!f64 {
 
 pub fn value_of(self: *const Self, n: i32, t: f64, note: Note) EofError!f64 {
     if (n == -1) {
-	return self.wf(t, note);
+        return wave_input.value(self.wf, t, note);
     }
     // TODO get rid of cyclic init
     const c = Chain.init(self);
