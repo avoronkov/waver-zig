@@ -90,13 +90,14 @@ pub fn init(a: Allocator, file: []const u8) !Self {
     std.debug.print("Lexer: tokens = {any}\n", .{tokens});
 
     return .{
-        .allocator= a,
+        .allocator = a,
         .tokens = tokens,
         .current = 0,
     };
 }
 
 pub fn deinit(self: *Self) void {
+    free_tokens(self.allocator, self.tokens);
     self.allocator.free(self.tokens);
 }
 
@@ -120,8 +121,21 @@ pub fn drop(self: *Self) void {
     self.current += 1;
 }
 
+fn free_tokens(a: Allocator, tokens: []Token) void {
+    for (tokens) |t| {
+        switch (t) {
+            .string => |s| a.free(s),
+            else => {},
+        }
+    }
+}
+
 fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
     var list = std.ArrayListUnmanaged(Token){};
+    errdefer {
+        free_tokens(a, list.items);
+        list.deinit(a);
+    }
     var i: usize = 0;
 
     LOOP: while (i < content.len) {
@@ -156,6 +170,14 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
             continue :LOOP;
         }
 
+        // Parse strings
+        if (try parse_utils.scan_string(content[i..])) |res| {
+            const str = try a.dupe(u8, res.value);
+            try list.append(a, Token{ .string = str });
+            i += res.offset;
+            continue :LOOP;
+        }
+
         // Scan comments
         if (parse_utils.scan_comment(content[i..])) |res| {
             i += res.offset;
@@ -183,7 +205,7 @@ test "parse_tokens numbers" {
 
     std.debug.print("parsed tokens: {any}\n", .{tokens});
     try expectEqual(6, tokens.len);
-    try expect(tokens[0].number ==  1);
+    try expect(tokens[0].number == 1);
     try expect(tokens[1].number == 23);
     try expect(tokens[2].number == 4567);
     try expect(tokens[3].float == 23.45);
@@ -202,6 +224,21 @@ test "parse_comments" {
     try expectEqualStrings("bar", tokens[2].ident.string());
     try expectEqual(.eol, tokens[3]);
     try expectEqual(.eof, tokens[4]);
+}
+
+test "parse_strings" {
+    const tokens = try parse_tokens(std.testing.allocator, "foo = \"bar-baz\"");
+    defer {
+        free_tokens(std.testing.allocator, tokens);
+        std.testing.allocator.free(tokens);
+    }
+
+    std.debug.print("parsed tokens: {any}\n", .{tokens});
+    try expectEqual(4, tokens.len);
+    try expectEqualStrings("foo", tokens[0].ident.string());
+    try expectEqual(.assign, tokens[1]);
+    try expectEqualStrings("bar-baz", tokens[2].string);
+    try expectEqual(.eof, tokens[3]);
 }
 
 fn skip_whitespaces(content: []const u8, i: usize) usize {

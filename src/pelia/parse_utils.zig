@@ -190,3 +190,23 @@ pub fn scan_comment(s: []const u8) ?ScanResult(void) {
        };
    } else return null;
 }
+
+pub fn scan_string(s: []const u8) !?ScanResult([]const u8) {
+    const n = for (0.., s) |i, c| {
+        if (i == 0) {
+            if (c != '"') {
+                return null;
+            }
+            continue;
+        }
+        if (c == '"') {
+            break i;
+        }
+    } else {
+        return error.UnexpectedEof;
+    };
+    return .{
+        .value = s[1..n],
+        .offset = n+1,
+    };
+}
