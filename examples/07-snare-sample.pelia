@@ -1,0 +1,2 @@
+snare = "./examples/07-snare-sample.wav"
+:4 snare

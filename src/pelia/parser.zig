@@ -12,7 +12,7 @@ const lisp = @import("../seq/lisp.zig");
 const edo12 = @import("../scales/edo12.zig");
 const literal = @import("../seq/literal.zig");
 const wave_input = @import("../wave_input.zig");
-
+const sample = @import("../sample.zig");
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
@@ -22,11 +22,11 @@ const Variables = std.StringHashMapUnmanaged(Literal);
 
 const Self = @This();
 
-const StatementType = enum{ pragma, assignment, regular };
+const StatementType = enum { pragma, assignment, regular };
 
 const SignalFilterParser = *const fn (self: *Self) ParseError!signal_filter.SignalFilter;
 
-const signalFilterParsers = [_]struct{
+const signalFilterParsers = [_]struct {
     token: Lexer.Token,
     parse: SignalFilterParser,
 }{
@@ -42,7 +42,7 @@ const signalFilterParsers = [_]struct{
 
 const FuncParser = *const fn (self: *Self) ParseError!Literal;
 
-const funcParsers = [_]struct{
+const funcParsers = [_]struct {
     token: Lexer.Token,
     parse: FuncParser,
 }{
@@ -58,16 +58,16 @@ const funcParsers = [_]struct{
     },
 };
 
-const atoms = [_]struct{
+const atoms = [_]struct {
     token: Lexer.Token,
     atom: Literal,
 }{
     .{
-        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("sin")},
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("sin") },
         .atom = .sin,
     },
     .{
-        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("pow")},
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("pow") },
         .atom = .pow,
     },
 };
@@ -130,7 +130,7 @@ pub fn parse(self: *Self) !Program {
 
     for (edo12.notes.keys()) |key| {
         const value = edo12.notes.get(key) orelse std.debug.panic("Edo12 key not found: {s}\n", .{key});
-        try prog.variables.put(self.allocator, try self.allocator.dupe(u8, key), Literal{ .number = value});
+        try prog.variables.put(self.allocator, try self.allocator.dupe(u8, key), Literal{ .number = value });
     }
 
     prog.seqCounters = self.seqCounters;
@@ -183,7 +183,13 @@ fn parseSignaler(
     try self.checkWaveformUsed(prog);
 
     const inst = try self.parseAtom();
-    const freq = try self.parseAtom();
+    // const freq = try self.parseAtom();
+    const freq: Literal = if (self.lexer.top()) |tok| blk: {
+        break :blk if (tok == .eol or tok == .eof)
+            Literal{ .float = 0 }
+        else
+            try self.parseAtom();
+    } else Literal{ .float = 0 };
 
     try s.add_func(signal_func.SignalFunc{
         .inst = inst,
@@ -201,7 +207,6 @@ fn parseSignaler(
                 return error.unexpectedToken;
             },
         }
-
     } else {
         return error.unexpectedEof;
     }
@@ -327,7 +332,7 @@ fn parseBracketsList(self: *Self) ParseError!Literal {
     }
 
     return Literal{
-        .list =  try list.toOwnedSlice(self.allocator),
+        .list = try list.toOwnedSlice(self.allocator),
     };
 }
 
@@ -408,6 +413,21 @@ fn parseAssignment(
                 try self.definedVars.insert(name.string());
                 return;
             }
+        },
+        .string => |filepath| {
+            self.lexer.drop();
+            const smp = try sample.parseSampleFile(self.allocator, filepath);
+            errdefer smp.deinit();
+            const wi = wave_input.WaveInput{ .sample = smp };
+            var inst = Instrument.init(self.allocator, wi);
+            try self.parseInstrumentFilters(&inst);
+            try prog.instruments.put(
+                self.allocator,
+                try prog.allocator.dupe(u8, name.string()),
+                inst,
+            );
+            try self.definedVars.insert(name.string());
+            return;
         },
         else => {},
     }

@@ -30,6 +30,12 @@ pub fn deinit(self: *Self) void {
         filter.free_filter(f);
     }
     self.filters.deinit(self.allocator);
+
+    // Deinit samples
+    switch (self.wf) {
+        .sample => |s| s.deinit(),
+        else => {},
+    }
 }
 
 pub fn copy(self: *const Self) !Self {
@@ -40,7 +46,7 @@ pub fn copy(self: *const Self) !Self {
     }
     return .{
         .allocator = self.allocator,
-        .wf = self.wf,
+        .wf = try wave_input.copy(&self.wf),
         .filters = filters,
     };
 }
@@ -56,8 +62,9 @@ pub fn value(self: Self, t: f64, note: Note) EofError!f64 {
 
 pub fn value_of(self: *const Self, n: i32, t: f64, note: Note) EofError!f64 {
     if (n == -1) {
-        return wave_input.value(self.wf, t, note);
+        return wave_input.value(&self.wf, t, note);
     }
+
     // TODO get rid of cyclic init
     const c = Chain.init(self);
     const i: usize = @intCast(n);
