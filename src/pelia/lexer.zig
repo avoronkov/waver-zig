@@ -1,7 +1,10 @@
 const std = @import("std");
 const parse_utils = @import("./parse_utils.zig");
+const primitives = @import("./primitives.zig");
 
 const Allocator = std.mem.Allocator;
+
+const Ident = primitives.Ident;
 
 const Self = @This();
 
@@ -28,7 +31,7 @@ pub const Token = union(enum) {
     float: f64,
     eol,
     eof,
-    ident: []const u8,
+    ident: Ident,
     percent,
     double_percent,
     string: []const u8,
@@ -122,7 +125,6 @@ fn free_tokens(a: Allocator, tokens: []Token) void {
     for (tokens) |t| {
         switch (t) {
             .string => |s| a.free(s),
-            .ident => |i| a.free(i),
             else => {},
         }
     }
@@ -162,7 +164,7 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
         }
 
         // Parse identifiers
-        if (parse_utils.scan_ident(content[i..])) |res| {
+        if (try parse_utils.scan_ident(content[i..])) |res| {
             try list.append(a, Token{ .ident = res.value });
             i += res.offset;
             continue :LOOP;

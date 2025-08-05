@@ -48,12 +48,12 @@ const funcParsers = [_]struct {
 }{
     .{ .token = .ampersand, .parse = parseRand },
     .{
-        .token = Lexer.Token{ .ident = "rand" },
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("rand") },
         .parse = parseRand,
     },
     .{ .token = .at, .parse = parseSeq },
     .{
-        .token = Lexer.Token{ .ident = "seq" },
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("seq") },
         .parse = parseSeq,
     },
 };
@@ -63,11 +63,11 @@ const atoms = [_]struct {
     atom: Literal,
 }{
     .{
-        .token = Lexer.Token{ .ident = "sin" },
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("sin") },
         .atom = .sin,
     },
     .{
-        .token = Lexer.Token{ .ident = "pow" },
+        .token = Lexer.Token{ .ident = primitives.Ident.initComptime("pow") },
         .atom = .pow,
     },
 };
@@ -153,7 +153,7 @@ fn nextStatementType(self: *Self) !StatementType {
         return .pragma;
     }
     return switch (token) {
-        .ident => |id| if (self.isIdentKnown(id)) .regular else .assignment,
+        .ident => |id| if (self.isIdentKnown(id.string())) .regular else .assignment,
         else => .regular,
     };
 }
@@ -225,7 +225,6 @@ const ParseError = error{
     unexpectedToken,
     unexpectedEof,
     niy,
-    tooBig,
     OutOfMemory,
 };
 
@@ -250,16 +249,16 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
         }
         return switch (tok) {
             .ident => |i| blk: {
-                if (self.definedFuncs.contains(i)) {
+                if (self.definedFuncs.contains(i.string())) {
                     const arg = try self.parseAtom();
                     var list = try self.allocator.alloc(Literal, 3);
                     errdefer self.allocator.free(list);
                     list[0] = .func;
-                    list[1] = .{ .ident = try primitives.Ident.init(i) };
+                    list[1] = .{ .ident = i };
                     list[2] = arg;
                     return .{ .list = list };
                 }
-                break :blk Literal{ .ident = try primitives.Ident.init(i) };
+                break :blk Literal{ .ident = i };
             },
             .float => |f| Literal{ .float = f },
             .number => |n| Literal{ .number = n },
@@ -342,16 +341,16 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
     if (self.lexer.top()) |t| {
         switch (t) {
             .ident => |id| {
-                if (waveform.waveforms.get(id)) |wf| {
+                if (waveform.waveforms.get(id.string())) |wf| {
                     const wi = wave_input.WaveInput{ .waveform = wf };
                     const inst = Instrument.init(self.allocator, wi);
-                    if (prog.instruments.get(id)) |_| {
+                    if (prog.instruments.get(id.string())) |_| {
                         // Instrument already exists.
                         return;
                     }
                     try prog.instruments.put(
                         prog.allocator,
-                        try prog.allocator.dupe(u8, id),
+                        try prog.allocator.dupe(u8, id.string()),
                         inst,
                     );
                     return;
@@ -400,7 +399,7 @@ fn parseAssignment(
     const t3 = self.lexer.top() orelse return error.unexpectedEof;
     switch (t3) {
         .ident => |id| {
-            if (waveform.waveforms.get(id)) |wf| {
+            if (waveform.waveforms.get(id.string())) |wf| {
                 // Instrument assignment
                 self.lexer.drop();
                 const wi = wave_input.WaveInput{ .waveform = wf };
@@ -408,10 +407,10 @@ fn parseAssignment(
                 try self.parseInstrumentFilters(&inst);
                 try prog.instruments.put(
                     self.allocator,
-                    try prog.allocator.dupe(u8, name),
+                    try prog.allocator.dupe(u8, name.string()),
                     inst,
                 );
-                try self.definedVars.insert(name);
+                try self.definedVars.insert(name.string());
                 return;
             }
         },
@@ -424,10 +423,10 @@ fn parseAssignment(
             try self.parseInstrumentFilters(&inst);
             try prog.instruments.put(
                 self.allocator,
-                try prog.allocator.dupe(u8, name),
+                try prog.allocator.dupe(u8, name.string()),
                 inst,
             );
-            try self.definedVars.insert(name);
+            try self.definedVars.insert(name.string());
             return;
         },
         else => {},
@@ -435,20 +434,20 @@ fn parseAssignment(
 
     // variable assignment
     const atom = try self.parseAtom();
-    const key = try self.allocator.dupe(u8, name);
+    const key = try self.allocator.dupe(u8, name.string());
     try prog.variables.put(self.allocator, key, atom);
 }
 
-fn parseFunctionAssignment(self: *Self, prog: *Program, name: []const u8, argname: []const u8) !void {
+fn parseFunctionAssignment(self: *Self, prog: *Program, name: primitives.Ident, argname: primitives.Ident) !void {
     const t3 = self.lexer.pop() orelse return error.unexpectedEof;
     if (t3 != .assign) {
         return error.unexpectedToken;
     }
     const raw = try self.parseAtom();
     defer literal.freeLiteral(self.allocator, raw);
-    const body = try literal.substitute(self.allocator, raw, .{ .ident = try primitives.Ident.init(argname) }, .arg);
-    try prog.functions.put(prog.allocator, try prog.allocator.dupe(u8, name), body);
-    try self.definedFuncs.insert(name);
+    const body = try literal.substitute(self.allocator, raw, .{ .ident = argname }, .arg);
+    try prog.functions.put(prog.allocator, try prog.allocator.dupe(u8, name.string()), body);
+    try self.definedFuncs.insert(name.string());
 }
 
 fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
@@ -549,7 +548,7 @@ fn findAtom(tok: Lexer.Token) ?Literal {
 
 fn tokensEql(a: Lexer.Token, b: Lexer.Token) bool {
     return (std.meta.activeTag(a) == std.meta.activeTag(b)) and switch (a) {
-        .ident => |tokId| std.mem.eql(u8, tokId, b.ident),
+        .ident => |tokId| std.mem.eql(u8, tokId.string(), b.ident.string()),
         .string => |s| std.mem.eql(u8, s, b.string),
         else => true,
     };

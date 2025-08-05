@@ -150,7 +150,7 @@ test "float: error" {
     }
 }
 
-pub fn scan_ident(s: []const u8) ?ScanResult([]const u8) {
+pub fn scan_ident(s: []const u8) !?ScanResult(Ident) {
     const n = for (0.., s) |i, c| {
         if (i == 0) {
             if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z')) {
@@ -163,8 +163,9 @@ pub fn scan_ident(s: []const u8) ?ScanResult([]const u8) {
     if (n == 0) {
         return null;
     }
+    const ident = try Ident.init(s[0..n]);
     return .{
-        .value = s[0..n],
+        .value = ident,
         .offset = n,
     };
 }
