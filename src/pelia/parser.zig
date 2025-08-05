@@ -158,6 +158,7 @@ fn nextStatementType(self: *Self) !StatementType {
     };
 }
 
+/// Used to check if first token in a line is known to detect type of statement.
 fn isIdentKnown(self: *const Self, ident: []const u8) bool {
     if (waveform.waveforms.has(ident)) {
         return true;
@@ -461,11 +462,26 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             return error.unexpectedToken;
         }
 
-        const code = try self.parseAtom();
-        literal.dumpLiteral("Lisp code", code);
-        try in.add_filter(filter.Filter{
-            .code = filter.LispCode.init(self.allocator, code),
-        });
+        const tfilt = self.lexer.top() orelse return error.unexpectedEof;
+        switch (tfilt) {
+            .ident => |id| {
+                if (filter.filters.get(id)) |flt| {
+                    self.lexer.drop();
+                    std.debug.print("Add filter {s}\n", .{id});
+                    try in.add_filter(flt);
+                } else {
+                    std.debug.print("Unknown filter: {s}\n", .{id});
+                    return error.unexpectedToken;
+                }
+            },
+            else => {
+                const code = try self.parseAtom();
+                literal.dumpLiteral("Lisp code", code);
+                try in.add_filter(filter.Filter{
+                    .code = filter.LispCode.init(self.allocator, code),
+                });
+            },
+        }
     }
 }
 

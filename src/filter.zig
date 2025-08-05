@@ -12,12 +12,14 @@ const Literal = literal.Literal;
 
 pub const Am = struct {
     freq: f64,
+    amp: f64,
 
     pub fn apply(self: Am, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
         const x = 2 * std.math.pi * t * self.freq;
         const am = std.math.sin(x);
-        const v = try chain.value_of(n-1, t, note);
-        return am * v;
+        const mp = (2.0 - self.amp + self.amp * am) / 2.0;
+        const v = try chain.value_of(n - 1, t, note);
+        return v * mp;
     }
 };
 
@@ -34,7 +36,7 @@ const TestChain = struct {
 test "AM benchmark" {
     const testChain = TestChain{};
     const chain = Chain.init(&testChain);
-    const am = Am{ .freq = 16.0 };
+    const am = Am{ .freq = 16.0, .amp = 1.0 };
     const note = Note{
         .freq = 440,
         .amp = 0.5,
@@ -54,7 +56,7 @@ pub const Exp = struct {
     value: f64,
 
     pub fn apply(self: Exp, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        const v = try chain.value_of(n-1, t, note);
+        const v = try chain.value_of(n - 1, t, note);
         return std.math.pow(f64, v, self.value);
     }
 };
@@ -77,7 +79,6 @@ test "Exp benchmark" {
     const ns = @divFloor(finish - start, 10000);
     std.debug.print("Exp benchmark: {}ns per op\n", .{ns});
 }
-
 
 pub const LispCode = struct {
     allocator: Allocator,
@@ -103,7 +104,7 @@ pub const LispCode = struct {
     }
 
     pub fn apply(self: *const LispCode, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        const v = try chain.value_of(n-1, t, note);
+        const v = try chain.value_of(n - 1, t, note);
         var ctx = Context.init(self.allocator);
         defer ctx.deinit();
         ctx.input = v;
@@ -134,9 +135,9 @@ test "LispCode benchmark" {
     };
     const code = Literal{
         .list = &[_]Literal{
-           .pow,
-           Literal{ .ident = try primitives.Ident.init("input") },
-           Literal{ .float = 4.0 },
+            .pow,
+            Literal{ .ident = try primitives.Ident.init("input") },
+            Literal{ .float = 4.0 },
         },
     };
 
@@ -158,7 +159,7 @@ pub const Filter = union(enum) {
 };
 
 pub fn filter_apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-    return switch(f) {
+    return switch (f) {
         .am => |v| v.apply(chain, n, t, note),
         .exp => |v| v.apply(chain, n, t, note),
         .code => |v| v.apply(chain, n, t, note),
@@ -166,7 +167,7 @@ pub fn filter_apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofErro
 }
 
 pub fn free_filter(f: *Filter) void {
-    switch(f.*) {
+    switch (f.*) {
         .am => {},
         .exp => {},
         .code => |*c| c.deinit(),
@@ -180,3 +181,7 @@ pub fn copy_filter(a: Allocator, f: Filter) !Filter {
         .code => |v| .{ .code = try v.copy(a) },
     };
 }
+
+pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.{
+    .{ "am", Filter{ .am = Am{ .freq = 16, .amp = 1 } } },
+});
