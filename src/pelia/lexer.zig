@@ -1,10 +1,7 @@
 const std = @import("std");
 const parse_utils = @import("./parse_utils.zig");
-const primitives = @import("./primitives.zig");
 
 const Allocator = std.mem.Allocator;
-
-const Ident = primitives.Ident;
 
 const Self = @This();
 
@@ -31,7 +28,7 @@ pub const Token = union(enum) {
     float: f64,
     eol,
     eof,
-    ident: Ident,
+    ident: []const u8,
     percent,
     double_percent,
     string: []const u8,
@@ -125,6 +122,7 @@ fn free_tokens(a: Allocator, tokens: []Token) void {
     for (tokens) |t| {
         switch (t) {
             .string => |s| a.free(s),
+            .ident => |i| a.free(i),
             else => {},
         }
     }
@@ -164,8 +162,9 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
         }
 
         // Parse identifiers
-        if (try parse_utils.scan_ident(content[i..])) |res| {
-            try list.append(a, Token{ .ident = res.value });
+        if (parse_utils.scan_ident(content[i..])) |res| {
+            const ident = try a.dupe(u8, res.value);
+            try list.append(a, Token{ .ident = ident });
             i += res.offset;
             continue :LOOP;
         }
@@ -193,7 +192,10 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
 
 test "parse_tokens" {
     const tokens = try parse_tokens(std.testing.allocator, "+ - -> : hello");
-    defer std.testing.allocator.free(tokens);
+    defer {
+        free_tokens(std.testing.allocator, tokens);
+        std.testing.allocator.free(tokens);
+    }
 
     std.debug.print("parsed tokens: {any}\n", .{tokens});
     try expect(tokens.len == 6);
@@ -215,13 +217,16 @@ test "parse_tokens numbers" {
 
 test "parse_comments" {
     const tokens = try parse_tokens(std.testing.allocator, "foo # this is a comment\nbar\n# this is a comment too");
-    defer std.testing.allocator.free(tokens);
+    defer {
+        free_tokens(std.testing.allocator, tokens);
+        std.testing.allocator.free(tokens);
+    }
 
     std.debug.print("parsed tokens: {any}\n", .{tokens});
     try expectEqual(5, tokens.len);
-    try expectEqualStrings("foo", tokens[0].ident.string());
+    try expectEqualStrings("foo", tokens[0].ident);
     try expectEqual(.eol, tokens[1]);
-    try expectEqualStrings("bar", tokens[2].ident.string());
+    try expectEqualStrings("bar", tokens[2].ident);
     try expectEqual(.eol, tokens[3]);
     try expectEqual(.eof, tokens[4]);
 }
@@ -235,7 +240,7 @@ test "parse_strings" {
 
     std.debug.print("parsed tokens: {any}\n", .{tokens});
     try expectEqual(4, tokens.len);
-    try expectEqualStrings("foo", tokens[0].ident.string());
+    try expectEqualStrings("foo", tokens[0].ident);
     try expectEqual(.assign, tokens[1]);
     try expectEqualStrings("bar-baz", tokens[2].string);
     try expectEqual(.eof, tokens[3]);

@@ -150,45 +150,44 @@ test "float: error" {
     }
 }
 
-pub fn scan_ident(s: []const u8) !?ScanResult(Ident) {
+pub fn scan_ident(s: []const u8) ?ScanResult([]const u8) {
     const n = for (0.., s) |i, c| {
         if (i == 0) {
             if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z')) {
                 break i;
             }
         } else if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z' or c >= '0' and c <= '9')) {
-                break i;
-            }
+            break i;
+        }
     } else s.len;
     if (n == 0) {
         return null;
     }
-    const ident = try Ident.init(s[0..n]);
     return .{
-        .value = ident,
+        .value = s[0..n],
         .offset = n,
     };
 }
 
 test "scan_ident success" {
-    const res = try scan_ident("hello123+") orelse unreachable;
-    try std.testing.expectEqualStrings("hello123", res.value.string());
+    const res = scan_ident("hello123+") orelse unreachable;
+    try std.testing.expectEqualStrings("hello123", res.value);
     try std.testing.expectEqual(8, res.offset);
 }
 
 pub fn scan_comment(s: []const u8) ?ScanResult(void) {
-   if (s.len > 0 and s[0] == '#') {
-       if (std.mem.indexOf(u8, s, "\n")) |idx| {
-           return .{
-               .value = {},
-               .offset = idx,
-           };
-       }
-       return .{
-           .value = {},
-           .offset = s.len,
-       };
-   } else return null;
+    if (s.len > 0 and s[0] == '#') {
+        if (std.mem.indexOf(u8, s, "\n")) |idx| {
+            return .{
+                .value = {},
+                .offset = idx,
+            };
+        }
+        return .{
+            .value = {},
+            .offset = s.len,
+        };
+    } else return null;
 }
 
 pub fn scan_string(s: []const u8) !?ScanResult([]const u8) {
@@ -207,6 +206,6 @@ pub fn scan_string(s: []const u8) !?ScanResult([]const u8) {
     };
     return .{
         .value = s[1..n],
-        .offset = n+1,
+        .offset = n + 1,
     };
 }
