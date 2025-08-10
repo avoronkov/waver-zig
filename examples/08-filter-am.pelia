@@ -1,3 +1,3 @@
-in = sine | am
+in = sine | am freq=24.0
 
 :2 in F4

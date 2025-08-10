@@ -13,6 +13,7 @@ const edo12 = @import("../scales/edo12.zig");
 const literal = @import("../seq/literal.zig");
 const wave_input = @import("../wave_input.zig");
 const sample = @import("../sample.zig");
+const setStructField = @import("../utils/struct.zig").setStructField;
 
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
@@ -184,7 +185,6 @@ fn parseSignaler(
     try self.checkWaveformUsed(prog);
 
     const inst = try self.parseAtom();
-    // const freq = try self.parseAtom();
     const freq: Literal = if (self.lexer.top()) |tok| blk: {
         break :blk if (tok == .eol or tok == .eof)
             Literal{ .float = 0 }
@@ -228,6 +228,8 @@ const ParseError = error{
     niy,
     tooBig,
     OutOfMemory,
+    badKey,
+    valueTypeMismatch,
 };
 
 fn parseAtom(self: *Self) ParseError!Literal {
@@ -465,9 +467,11 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
         const tfilt = self.lexer.top() orelse return error.unexpectedEof;
         switch (tfilt) {
             .ident => |id| {
-                if (filter.filters.get(id)) |flt| {
+                if (filter.filters.get(id)) |fl| {
                     self.lexer.drop();
                     std.debug.print("Add filter {s}\n", .{id});
+                    var flt = fl;
+                    try self.parseInstrumentFilterParams(&flt);
                     try in.add_filter(flt);
                 } else {
                     std.debug.print("Unknown filter: {s}\n", .{id});
@@ -483,6 +487,48 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             },
         }
     }
+}
+
+fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
+    while (self.lexer.top()) |tok| {
+        if (tok == .eol or tok == .eof or tok == .vertical_bar) {
+            return;
+        }
+        self.lexer.drop();
+
+        // Parse param name.
+        const name = switch (tok) {
+            .ident => |id| id,
+            else => {
+                std.debug.print("parseInstrumentFilterParams: unexpected token {any}\n", .{tok});
+                return error.unexpectedToken;
+            },
+        };
+
+        // Skip .assign.
+        const assignTok = self.lexer.pop() orelse return error.unexpectedEof;
+        if (assignTok != .assign) {
+            std.debug.print("parseInstrumentFilterParams: unexpected token {any}\n", .{assignTok});
+            return error.unexpectedToken;
+        }
+
+        // Parse param value: [-](int | float).
+        const value1 = self.lexer.pop() orelse return error.unexpectedEof;
+        try switch (value1) {
+            .number => |n| setFilterParam(flt, name, n),
+            .float => |f| setFilterParam(flt, name, f),
+            // TODO handle [-] (negative values).
+            else => return error.unexpectedToken,
+        };
+    }
+}
+
+fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
+    try switch (flt.*) {
+        .am => |*v| setStructField(v, key, value),
+        .exp => |*v| setStructField(v, key, value),
+        .code => {},
+    };
 }
 
 // Signal filter parsers
