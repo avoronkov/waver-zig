@@ -16,7 +16,7 @@ pub fn main() !void {
     defer args.deinit();
 
     if (args.input.len == 0) {
-        std.debug.print("No input file specified.\n", .{});
+        std.log.err("No input file specified.\n", .{});
         return error.noInput;
     }
 

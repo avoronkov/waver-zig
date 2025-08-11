@@ -1,9 +1,7 @@
 const std = @import("std");
 const Signaler = @import("../seq/signaler.zig");
-const lisp = @import("../seq/lisp.zig");
 const literal = @import("../seq/literal.zig");
 const Instrument = @import("../instrument.zig");
-const primitives = @import("./primitives.zig");
 
 const Allocator = std.mem.Allocator;
 const Literal = literal.Literal;

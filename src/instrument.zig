@@ -1,5 +1,4 @@
 const std = @import("std");
-const waveform = @import("./waveform.zig");
 const wave_input = @import("./wave_input.zig");
 const filter = @import("./filter.zig");
 const Note = @import("./note.zig");

@@ -53,15 +53,15 @@ pub fn run(self: *Self) !void {
     self.context.scaleFrequencies = self.program.scaleFrequencies;
     var bit: i64 = 0;
     while (bit < 16) {
-        std.debug.print("Bit {}\n", .{bit});
+        std.log.info("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
              self.handle_signaler(s, bit) catch |err| {
-                 std.debug.print("Error: {!}\n", .{ err });
+                 std.log.err("Error: {!}", .{ err });
              };
         }
         bit += 1;
         self.check_file_modified() catch |err| {
-             std.debug.print("Error checking file update: {!}\n", .{ err });
+             std.log.err("Error checking file update: {!}", .{ err });
         };
         self.sleep(bit);
     }
@@ -76,7 +76,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
         defer self.allocator.free(sigs);
         for (sigs) |sig| {
             var inst = self.program.instruments.get(sig.instrument.string()) orelse {
-                std.debug.print("Instrument not found: {s}\n", .{sig.instrument.string()});
+                std.log.err("Instrument not found: {s}", .{sig.instrument.string()});
                 return error.NotFound;
             };
             const durFloat: f64 = @floatFromInt(sig.duration_bits);
@@ -92,7 +92,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
 
 fn sleep(self: Self, frame: i64) void {
     const dur: u64 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - std.time.microTimestamp()));
-    std.debug.print("sleep frame [{}]: {} nano\n", .{frame, dur});
+    std.log.debug("sleep frame [{}]: {} nano", .{frame, dur});
     std.time.sleep(dur);
 }
 

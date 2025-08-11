@@ -8,7 +8,6 @@ const Instrument = @import("../instrument.zig");
 const filter = @import("../filter.zig");
 const primitives = @import("./primitives.zig");
 const waveform = @import("../waveform.zig");
-const lisp = @import("../seq/lisp.zig");
 const edo12 = @import("../scales/edo12.zig");
 const literal = @import("../seq/literal.zig");
 const wave_input = @import("../wave_input.zig");
@@ -18,8 +17,6 @@ const setStructField = @import("../utils/struct.zig").setStructField;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayListUnmanaged;
 const Literal = literal.Literal;
-
-const Variables = std.StringHashMapUnmanaged(Literal);
 
 const Self = @This();
 
@@ -86,7 +83,7 @@ pub fn parseFile(a: Allocator, file: []const u8) !Program {
     defer parser.deinit();
     const result = try parser.parse();
     const end = std.time.nanoTimestamp();
-    std.debug.print("parse_file took {}ns\n", .{end - start});
+    std.log.info("parse_file took {}ns\n", .{end - start});
     return result;
 }
 
@@ -204,7 +201,7 @@ fn parseSignaler(
             .eol => return s,
             .eof => return s,
             else => return {
-                std.debug.print("Unexpected token while parsing end of signaler: {any}\n", .{tok});
+                std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
                 return error.unexpectedToken;
             },
         }
@@ -279,7 +276,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
                 } else return error.unexpectedEof;
             },
             else => {
-                std.debug.print("Unexpected token while parsing atom: {any}\n", .{tok});
+                std.log.err("Unexpected token while parsing atom: {any}\n", .{tok});
                 return error.unexpectedToken;
             },
         };
@@ -460,7 +457,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             return;
         }
         if (tok != .vertical_bar) {
-            std.debug.print("Unexpected token while parsing instrument filters: {any}\n", .{tok});
+            std.log.err("Unexpected token while parsing instrument filters: {any}\n", .{tok});
             return error.unexpectedToken;
         }
 
@@ -469,12 +466,12 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             .ident => |id| {
                 if (filter.filters.get(id)) |fl| {
                     self.lexer.drop();
-                    std.debug.print("Add filter {s}\n", .{id});
+                    std.log.err("Add filter {s}\n", .{id});
                     var flt = fl;
                     try self.parseInstrumentFilterParams(&flt);
                     try in.add_filter(flt);
                 } else {
-                    std.debug.print("Unknown filter: {s}\n", .{id});
+                    std.log.err("Unknown filter: {s}\n", .{id});
                     return error.unexpectedToken;
                 }
             },
@@ -500,7 +497,7 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         const name = switch (tok) {
             .ident => |id| id,
             else => {
-                std.debug.print("parseInstrumentFilterParams: unexpected token {any}\n", .{tok});
+                std.log.err("parseInstrumentFilterParams: unexpected token {any}\n", .{tok});
                 return error.unexpectedToken;
             },
         };
@@ -508,7 +505,7 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         // Skip .assign.
         const assignTok = self.lexer.pop() orelse return error.unexpectedEof;
         if (assignTok != .assign) {
-            std.debug.print("parseInstrumentFilterParams: unexpected token {any}\n", .{assignTok});
+            std.log.err("parseInstrumentFilterParams: unexpected token {any}\n", .{assignTok});
             return error.unexpectedToken;
         }
 

@@ -15,7 +15,7 @@ pub const paSampleSpec: c.pa_sample_spec = .{
 
 pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
     if (ret < 0) {
-        std.debug.print("failed {s}: {s}\n", .{ msg, c.pa_strerror(err.*) });
+        std.log.err("failed {s}: {s}\n", .{ msg, c.pa_strerror(err.*) });
         return error.PA;
     }
 }
@@ -23,7 +23,7 @@ pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
 pub fn paSimpleNew() !*c.pa_simple {
     var err: c_int = 0;
     const s = c.pa_simple_new(null, "alxr-pulse", c.PA_STREAM_PLAYBACK, null, "playback", &paSampleSpec, null, null, &err) orelse {
-        std.debug.print("pa_simple_new failed: {s}\n", .{c.pa_strerror(err)});
+        std.log.err("pa_simple_new failed: {s}\n", .{c.pa_strerror(err)});
         return error.PA;
     };
     return s;
@@ -63,20 +63,16 @@ pub fn play(pa: *c.pa_simple, wave: anytype) !void {
             break;
         }
 
-        // const start = std.time.microTimestamp();
         try check("pa_simple_write", c.pa_simple_write(pa, &buffer, written, &err), &err);
 
         const written_ms: i64 = @divTrunc(1000000 * frame, SAMPLE_RATE);
         const finish = std.time.microTimestamp();
-        // const dt = finish - start;
         const passed_ms = finish - play_start;
         const ahead = written_ms - passed_ms;
-        // std.debug.print("Wrote buffer in {} micros (ahead: {} micros)\n", .{dt, ahead});
         if (ahead > 5000) {
             const sleep: u64 = @intCast((ahead - 5000) * 1000);
-            // std.debug.print("sleep {}\n", .{sleep});
             std.time.sleep(sleep);
         }
     }
-    std.debug.print("Samples written: {}\n", .{frame});
+    std.log.info("Samples written: {}\n", .{frame});
 }

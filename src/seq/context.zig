@@ -1,5 +1,4 @@
 const std = @import("std");
-const lisp = @import("./lisp.zig");
 const Literal = @import("./literal.zig").Literal;
 
 const Allocator = std.mem.Allocator;

@@ -45,7 +45,7 @@ pub fn copyLiteral(a: Allocator, l: Literal) !Literal {
 }
 
 pub fn dumpLiteral(prefix: []const u8, l: Literal) void {
-    const debug = std.debug.print;
+    const debug = std.log.debug;
     if (prefix.len > 0) {
         debug("{s}: ", .{prefix});
     }

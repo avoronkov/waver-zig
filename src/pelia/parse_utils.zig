@@ -1,6 +1,4 @@
 const std = @import("std");
-const primitives = @import("./primitives.zig");
-const Ident = primitives.Ident;
 
 fn ScanResult(comptime T: type) type {
     return struct {

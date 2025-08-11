@@ -110,14 +110,14 @@ pub const LispCode = struct {
         ctx.input = v;
         ctx.time = t;
         const res = lisp.eval(self.allocator, &ctx, self.code) catch |e| {
-            std.debug.print("Lisp code failure: {!}\n", .{e});
+            std.log.err("Lisp code failure: {!}\n", .{e});
             return error.Eof;
         };
         defer value.free_value(self.allocator, res);
         switch (res) {
             .float => |f| return f,
             else => {
-                std.debug.print("Lisp not float return: {any}\n", .{res});
+                std.log.err("Lisp not float return: {any}\n", .{res});
                 return error.Eof;
             },
         }

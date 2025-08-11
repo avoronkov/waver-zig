@@ -84,7 +84,7 @@ pub fn init(a: Allocator, file: []const u8) !Self {
     defer a.free(content);
 
     const tokens = try parse_tokens(a, content);
-    std.debug.print("Lexer: tokens = {any}\n", .{tokens});
+    std.log.debug("Lexer: tokens = {any}\n", .{tokens});
 
     return .{
         .allocator = a,

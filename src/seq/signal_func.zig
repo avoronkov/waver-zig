@@ -65,14 +65,14 @@ pub const SignalFunc = struct {
                             break :blk try self.evalAmpDur(a, ctx, inst, freq, res);
                         },
                         else => {
-                            std.debug.print("badFrequency [1]: {any}\n", .{v});
+                            std.log.err("badFrequency [1]: {any}\n", .{v});
                             return error.badFrequency;
                         },
                     }
                 }
             },
             else => {
-                std.debug.print("badFrequency [2]: {any}\n", .{freqVal});
+                std.log.err("badFrequency [2]: {any}\n", .{freqVal});
                 return error.badFrequency;
             },
         }
