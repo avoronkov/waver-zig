@@ -202,17 +202,20 @@ test "parse_tokens" {
 }
 
 test "parse_tokens numbers" {
-    const tokens = try parse_tokens(std.testing.allocator, "1 23 4567 23.45 12.0");
+    const tokens = try parse_tokens(std.testing.allocator, "1 23 4567 23.45 12.0 4..8");
     defer std.testing.allocator.free(tokens);
 
     std.debug.print("parsed tokens: {any}\n", .{tokens});
-    try expectEqual(6, tokens.len);
+    try expectEqual(9, tokens.len);
     try expect(tokens[0].number == 1);
     try expect(tokens[1].number == 23);
     try expect(tokens[2].number == 4567);
     try expect(tokens[3].float == 23.45);
     try expect(tokens[4].float == 12.0);
-    try expect(tokens[5] == Token.eof);
+    try expect(tokens[5].number == 4);
+    try expect(tokens[6] == .double_dot);
+    try expect(tokens[7].number == 8);
+    try expect(tokens[8] == Token.eof);
 }
 
 test "parse_comments" {
