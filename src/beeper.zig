@@ -56,12 +56,12 @@ pub fn run(self: *Self) !void {
         std.log.info("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
              self.handle_signaler(s, bit) catch |err| {
-                 std.log.err("Error: {!}", .{ err });
+                 std.log.err("Error: {t}", .{ err });
              };
         }
         bit += 1;
         self.check_file_modified() catch |err| {
-             std.log.err("Error checking file update: {!}", .{ err });
+             std.log.err("Error checking file update: {t}", .{ err });
         };
         self.sleep(bit);
     }
@@ -91,9 +91,9 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
 }
 
 fn sleep(self: Self, frame: i64) void {
-    const dur: u64 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - std.time.microTimestamp()));
-    std.log.debug("sleep frame [{}]: {} nano", .{frame, dur});
-    std.time.sleep(dur);
+    const dur_ns: u64 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - std.time.microTimestamp()));
+    std.log.debug("sleep frame [{}]: {} nano", .{frame, dur_ns});
+    std.Thread.sleep(dur_ns);
 }
 
 fn check_file_modified(self: *Self) !void {

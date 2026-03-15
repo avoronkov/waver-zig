@@ -19,7 +19,7 @@ pub fn scan_int(comptime T: type, s: []const u8) ?ScanResult(T) {
     if (n == 0) {
         return null;
     }
-    const value = std.fmt.parseInt(T, s[0..n], 10) catch |e| std.debug.panic("parseInt('{s}') failed: {!}\n", .{ s[0..n], e });
+    const value = std.fmt.parseInt(T, s[0..n], 10) catch |e| std.debug.panic("parseInt('{s}') failed: {t}\n", .{ s[0..n], e });
     return .{
         .value = value,
         .offset = n,
@@ -88,7 +88,7 @@ pub fn scan_float(comptime T: type, s: []const u8) ?ScanResult(T) {
     if (n == 0 or !dot) {
         return null;
     }
-    const value = std.fmt.parseFloat(T, s[0..n]) catch |e| std.debug.panic("parseFloat('{s}' failed: {!}\n", .{ s[0..n], e });
+    const value = std.fmt.parseFloat(T, s[0..n]) catch |e| std.debug.panic("parseFloat('{s}' failed: {t}\n", .{ s[0..n], e });
     return .{
         .value = value,
         .offset = n,

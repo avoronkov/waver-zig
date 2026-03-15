@@ -1,21 +1,24 @@
 const std = @import("std");
 const Inst = @import("./instrument.zig");
 const EofError = @import("./wave.zig").EofError;
-const Wave = Inst.Wave;
+// const Wave = Inst.Wave;
 const Allocator = std.mem.Allocator;
 
 const Self = @This();
 
-const L = std.DoublyLinkedList(Wave);
+const Wave = struct {
+    wave: Inst.Wave,
+    node: std.DoublyLinkedList.Node,
+};
 
 allocator: Allocator,
-waves: L,
+waves: std.DoublyLinkedList,
 stopping: bool = false,
 
 pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
-        .waves = L{},
+        .waves = .{},
     };
 }
 
@@ -27,16 +30,21 @@ pub fn deinit(self: Self) void {
     }
 }
 
-pub fn append(self: *Self, wave: Wave) !void {
-    const node = try self.allocator.create(L.Node);
-    node.* = .{
-        .data = wave,
+pub fn append(self: *Self, wave: Inst.Wave) !void {
+    const w = try self.allocator.create(Wave);
+    w.* = .{
+        .wave = wave,
+        .node = .{},
     };
-    self.waves.append(node);
+    // const node = try self.allocator.create(L.Node);
+    // node.* = .{
+    //     .data = wave,
+    // };
+    self.waves.append(&w.node);
 }
 
 pub fn value(self: *Self, t: f64) EofError!f64 {
-    if (self.stopping and self.waves.len == 0) {
+    if (self.stopping and self.waves.len() == 0) {
         return error.Eof;
     }
 
@@ -44,16 +52,17 @@ pub fn value(self: *Self, t: f64) EofError!f64 {
     var val: f64 = 0;
     while (it) |node| {
         it = node.next;
-        if (node.data.start == null) {
-            node.data.start = t;
+        const wave: *Wave = @fieldParentPtr("node", node);
+        if (wave.wave.start == null) {
+            wave.wave.start = t;
         }
-        const start = node.data.start orelse unreachable;
+        const start = wave.wave.start orelse unreachable;
         if (t < start) {
             continue;
         }
-        const w = node.data.value(t - start);
+        const w = wave.wave.value(t - start);
         val += w catch blk: {
-            node.data.deinit();
+            wave.wave.deinit();
             self.waves.remove(node);
             self.allocator.destroy(node);
             break :blk 0;

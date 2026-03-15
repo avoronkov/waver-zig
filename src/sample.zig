@@ -38,8 +38,10 @@ pub fn parseSampleFile(a: Allocator, filename: []const u8) !Sample {
     var file = try std.fs.cwd().openFile(filename, .{});
     defer file.close();
 
-    var buf_reader = std.io.bufferedReader(file.reader());
-    var decoder = try wav.decoder(buf_reader.reader());
+
+    var file_buffer: [1024]u8 = undefined;
+    var file_reader = file.reader(&file_buffer);
+    var decoder = try wav.decoder(&file_reader.interface);
 
     var data = std.ArrayListUnmanaged(f32){};
     errdefer data.deinit(a);

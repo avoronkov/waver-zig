@@ -70,8 +70,8 @@ pub fn play(pa: *c.pa_simple, wave: anytype) !void {
         const passed_ms = finish - play_start;
         const ahead = written_ms - passed_ms;
         if (ahead > 5000) {
-            const sleep: u64 = @intCast((ahead - 5000) * 1000);
-            std.time.sleep(sleep);
+            const sleep_ns: u64 = @intCast((ahead - 5000) * 1000);
+            std.Thread.sleep(sleep_ns);
         }
     }
     std.log.info("Samples written: {}\n", .{frame});
