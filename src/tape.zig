@@ -64,7 +64,7 @@ pub fn value(self: *Self, t: f64) EofError!f64 {
         val += w catch blk: {
             wave.wave.deinit();
             self.waves.remove(node);
-            self.allocator.destroy(node);
+            self.allocator.destroy(wave);
             break :blk 0;
         };
     }
