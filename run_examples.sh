@@ -3,5 +3,5 @@ set -e
 
 for i in examples/*.pelia; do
 	echo "===> $i"
-	./zig-out/bin/waver-zig "$i"
+	./zig-out/bin/waver-zig --stop 16 "$i"
 done

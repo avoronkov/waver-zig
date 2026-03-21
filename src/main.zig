@@ -26,7 +26,7 @@ pub fn main() !void {
     var tape = Tape.init(allocator);
     defer tape.deinit();
 
-    var beeper = try Beeper.init(allocator, args.input, &tape, 250 * 1000);
+    var beeper = try Beeper.init(allocator, args.input, &tape, 250 * 1000, args.stop);
     defer beeper.deinit();
 
     var thread = try std.Thread.spawn(.{}, Beeper.run, .{&beeper});

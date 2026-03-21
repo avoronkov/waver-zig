@@ -17,12 +17,14 @@ periodFloat: f64,
 context: Context,
 program: Program,
 file: []const u8,
+stop: ?i64,
 
 pub fn init(
     allocator: Allocator,
     file: []const u8,
     tape: *Tape,
     periodMicro: i64,
+    stop: ?i64,
 ) !Self {
     const prog = try Parser.parseFile(allocator, file);
     var context = Context.init(allocator);
@@ -39,6 +41,7 @@ pub fn init(
         .context = context,
         .program = prog,
         .file = file,
+        .stop = stop,
     };
 }
 
@@ -52,7 +55,13 @@ pub fn run(self: *Self) !void {
     self.context.functions = &self.program.functions;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
     var bit: i64 = 0;
-    while (bit < 16) {
+    while (true) {
+        if (self.stop) |stop| {
+            if (bit >= stop) {
+                std.log.info("Stopping on bit {}", .{bit});
+                break;
+            }
+        }
         std.log.info("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
              self.handle_signaler(s, bit) catch |err| {
