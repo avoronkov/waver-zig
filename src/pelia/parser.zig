@@ -210,12 +210,41 @@ fn parseSignaler(
     }
 }
 
+fn parseRangeStatement(self: *Self, s: *Signaler, start: i64) !void {
+    self.lexer.drop();
+    if (self.lexer.pop()) |token| {
+        if (token != .double_dot) {
+            std.log.err("Unexpected token while parsing range statement: {any}\n", .{token});
+            return error.unexpectedToken;
+        }
+    } else return error.unexpectedEof;
+    try s.signal_filters.append(self.allocator, signal_filter.SignalFilter{
+        .moreOrEqual = signal_filter.MoreOrEqual{ .n = start },
+    });
+    if (self.lexer.top()) |token| {
+        switch (token) {
+            .number => |n| {
+                self.lexer.drop();
+                try s.signal_filters.append(self.allocator, signal_filter.SignalFilter{
+                    .lessThan = signal_filter.LessThan{ .n = n },
+                });
+            },
+            else => return,
+        }
+    } else return error.unexpectedEof;
+}
+
 fn parseSignalFilters(self: *Self, s: *Signaler) !void {
     while (self.lexer.top()) |tok| {
         if (findSignalFilterParser(tok)) |parser| {
             const filt = try parser(self);
             try s.signal_filters.insert(self.allocator, 0, filt);
-        } else return;
+        } else switch (tok) {
+            .number => |start| {
+                try self.parseRangeStatement(s, start);
+            },
+            else => return,
+        }
     } else return error.unexpectedEof;
 }
 

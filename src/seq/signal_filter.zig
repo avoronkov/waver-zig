@@ -17,14 +17,34 @@ pub const BitShift = struct {
     }
 };
 
+pub const MoreOrEqual = struct {
+    n: i64,
+
+    pub fn apply(self: MoreOrEqual, ctx: *Context) bool {
+        return ctx.bit >= self.n;
+    }
+};
+
+pub const LessThan = struct {
+    n: i64,
+
+    pub fn apply(self: LessThan, ctx: *Context) bool {
+        return ctx.bit < self.n;
+    }
+};
+
 pub const SignalFilter = union(enum) {
     every: Every,
     bitShift: BitShift,
+    moreOrEqual: MoreOrEqual,
+    lessThan: LessThan,
 };
 
 pub fn apply(f: SignalFilter, ctx: *Context) bool {
     return switch (f) {
         .every => |v| v.apply(ctx),
         .bitShift => |v| v.apply(ctx),
+        .lessThan => |v| v.apply(ctx),
+        .moreOrEqual => |v| v.apply(ctx),
     };
 }
