@@ -1,0 +1,19 @@
+.{
+    .name = .sequencer,
+    .version = "0.0.0",
+    .fingerprint = 0xc0e7800a2618b119, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .wav = .{
+            .path = "../wav",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}
