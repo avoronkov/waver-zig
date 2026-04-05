@@ -1,16 +1,11 @@
 const std = @import("std");
-const Tape = @import("./tape.zig");
-const Beeper = @import("./beeper.zig");
-const rand = @import("./seq/rand.zig");
-const pulse = @import("./pulse.zig");
 const Args = @import("./args.zig");
+const App = @import("./app.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
-
-    rand.init();
 
     const args = try Args.init(allocator);
     defer args.deinit();
@@ -20,21 +15,11 @@ pub fn main() !void {
         return error.noInput;
     }
 
-    const s = try pulse.paSimpleNew();
-    defer pulse.paSimpleFree(s);
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
 
-    var tape = Tape.init(allocator);
-    defer tape.deinit();
-
-    var beeper = try Beeper.init(allocator, args.input, &tape, 250 * 1000, args.stop);
-    defer beeper.deinit();
-
-    var thread = try std.Thread.spawn(.{}, Beeper.run, .{&beeper});
-    defer thread.join();
-
-    try pulse.play(s, &tape);
-
-    try pulse.paSimpleDrain(s);
+    try App.process_file(allocator, args.input, stdout, args.stop);
 
     std.log.info("OK", .{});
 }

@@ -18,6 +18,7 @@ context: Context,
 program: Program,
 file: []const u8,
 stop: ?i64,
+log: ?*std.Io.Writer = null,
 
 pub fn init(
     allocator: Allocator,
@@ -94,6 +95,10 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
                 .amp = sig.amplitude,
                 .dur = durFloat * self.periodFloat / 1000000,
             }, null);
+            if (self.log) |log| {
+                try log.print("[{d}] '{s}' freq={}, amp={}, dur={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, (durFloat * self.periodFloat / 1000000)});
+                try log.flush();
+            }
             try self.tape.append(w);
         }
     }
