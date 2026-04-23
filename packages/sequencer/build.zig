@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
     }).module("wav");
 
     const mod = b.addModule("sequencer", .{
-        .root_source_file = b.path("src/root.zig"),
+        .root_source_file = b.path("src/app.zig"),
         .target = target,
         .imports = &.{
             .{ .name = "wav", .module = dwav },

@@ -17,12 +17,12 @@ pub fn build(b: *std.Build) void {
     exe.linkLibC();
     exe.linkSystemLibrary("libpulse-simple");
 
-    const dwav = b.dependency("wav", .{
+    const dsequencer = b.dependency("sequencer", .{
         .target = target,
         .optimize = optimize,
-    }).module("wav");
+    }).module("sequencer");
 
-    exe.root_module.addImport("wav", dwav);
+    exe.root_module.addImport("sequencer", dsequencer);
 
     b.installArtifact(exe);
 
