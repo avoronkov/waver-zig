@@ -52,7 +52,7 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .sin => evalSin(a, ctx, l[1..]),
         .pow => evalPow(a, ctx, l[1..]),
         else => blk: {
-            var res = std.ArrayListUnmanaged(Value){};
+            var res: std.ArrayListUnmanaged(Value) = .empty;
             errdefer {
                 for (res.items) |it| {
                     value.free_value(a, it);

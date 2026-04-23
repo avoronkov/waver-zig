@@ -71,30 +71,33 @@ const atoms = [_]struct {
 };
 
 allocator: Allocator,
+io: std.Io,
 lexer: Lexer,
 mtime: i128,
 definedVars: std.BufSet,
 definedFuncs: std.BufSet,
 seqCounters: i64 = 0,
 
-pub fn parseFile(a: Allocator, file: []const u8) !Program {
-    const start = std.time.nanoTimestamp();
-    var parser = try init(a, file);
+pub fn parseFile(a: Allocator, io: std.Io, file: []const u8) !Program {
+    const clock = std.Io.Clock.real;
+    const start = clock.now(io);
+    var parser = try init(a, io, file);
     defer parser.deinit();
     const result = try parser.parse();
-    const end = std.time.nanoTimestamp();
-    std.log.info("parse_file took {}ns\n", .{end - start});
+    const dur = start.untilNow(io, clock);
+    std.log.info("parse_file took {}ns\n", .{dur.toNanoseconds()});
     return result;
 }
 
-pub fn init(a: Allocator, file: []const u8) !Self {
-    const stat = try std.fs.cwd().statFile(file);
-    const lexer = try Lexer.init(a, file);
+pub fn init(a: Allocator, io: std.Io, file: []const u8) !Self {
+    const stat = try std.Io.Dir.cwd().statFile(io, file, .{});
+    const lexer = try Lexer.init(a, io, file);
 
     return .{
         .allocator = a,
+        .io = io,
         .lexer = lexer,
-        .mtime = stat.mtime,
+        .mtime = stat.mtime.toNanoseconds(),
         .definedVars = std.BufSet.init(a),
         .definedFuncs = std.BufSet.init(a),
     };
@@ -313,7 +316,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
 }
 
 fn parseCommaSeparatedList(self: *Self, first: Literal) ParseError!Literal {
-    var list = ArrayList(Literal){};
+    var list: ArrayList(Literal) = .empty;
     errdefer {
         for (list.items) |item| {
             literal.freeLiteral(self.allocator, item);
@@ -340,7 +343,7 @@ fn parseCommaSeparatedList(self: *Self, first: Literal) ParseError!Literal {
 }
 
 fn parseBracketsList(self: *Self) ParseError!Literal {
-    var list = ArrayList(Literal){};
+    var list: ArrayList(Literal) = .empty;
     errdefer {
         for (list.items) |item| {
             literal.freeLiteral(self.allocator, item);
@@ -446,7 +449,7 @@ fn parseAssignment(
         },
         .string => |filepath| {
             self.lexer.drop();
-            const smp = try sample.parseSampleFile(self.allocator, filepath);
+            const smp = try sample.parseSampleFile(self.allocator, self.io, filepath);
             errdefer smp.deinit();
             const wi = wave_input.WaveInput{ .sample = smp };
             var inst = Instrument.init(self.allocator, wi);

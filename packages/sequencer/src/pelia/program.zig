@@ -12,7 +12,7 @@ const Self = @This();
 allocator: Allocator,
 mtime: i128 = 0,
 instruments: std.StringHashMapUnmanaged(Instrument) = .{},
-signalers: std.ArrayListUnmanaged(Signaler) = .{},
+signalers: std.ArrayListUnmanaged(Signaler) = .empty,
 seqCounters: i64 = 0,
 variables: std.StringHashMapUnmanaged(Literal) = .{},
 functions: std.StringHashMapUnmanaged(Literal) = .{},

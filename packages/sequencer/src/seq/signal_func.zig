@@ -24,7 +24,7 @@ pub const SignalFunc = struct {
     duration_bits: Literal,
 
     pub fn eval(self: SignalFunc, a: Allocator, ctx: *Context) !Signals {
-        var res = SignalList{};
+        var res: SignalList = .empty;
         errdefer res.deinit(a);
 
         const instVal = try lisp.eval(a, ctx, self.inst);

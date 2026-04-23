@@ -22,8 +22,8 @@ signal_funcs: SignalFuncs,
 pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
-        .signal_filters = SignalFilters{},
-        .signal_funcs = SignalFuncs{},
+        .signal_filters = .empty,
+        .signal_funcs = .empty,
     };
 }
 
@@ -50,7 +50,7 @@ pub fn signals(self: Self, ctx: *Context) !?Signals {
             return null;
         }
     }
-    var res = SignalList{};
+    var res: SignalList = .empty;
     errdefer res.deinit(self.allocator);
 
     for (self.signal_funcs.items) |f| {

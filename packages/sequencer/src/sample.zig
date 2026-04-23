@@ -34,16 +34,16 @@ pub const Sample = struct {
     }
 };
 
-pub fn parseSampleFile(a: Allocator, filename: []const u8) !Sample {
-    var file = try std.fs.cwd().openFile(filename, .{});
-    defer file.close();
+pub fn parseSampleFile(a: Allocator, io: std.Io, filename: []const u8) !Sample {
+    var file = try std.Io.Dir.cwd().openFile(io, filename, .{});
+    defer file.close(io);
 
 
     var file_buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&file_buffer);
+    var file_reader = file.reader(io, &file_buffer);
     var decoder = try wav.decoder(&file_reader.interface);
 
-    var data = std.ArrayListUnmanaged(f32){};
+    var data: std.ArrayListUnmanaged(f32) = .empty;
     errdefer data.deinit(a);
 
     var buff: [64]f32 = undefined;

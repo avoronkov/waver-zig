@@ -8,8 +8,8 @@ pub var prng: DefaultPrng = undefined;
 // SAFETY: initialized by init()
 pub var random: Random = undefined;
 
-pub fn init() void {
-    const ts: u128 = @bitCast(std.time.nanoTimestamp());
+pub fn init(io: std.Io, clock: std.Io.Clock) void {
+    const ts: u96 = @bitCast(clock.now(io).toNanoseconds());
     const seed: u64 = @truncate(ts);
 
     prng = DefaultPrng.init(seed);

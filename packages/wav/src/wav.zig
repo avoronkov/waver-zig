@@ -348,11 +348,12 @@ pub fn encoder(
 }
 
 test "pcm(bits=8) sample_rate=22050 channels=1" {
-    var file = try std.fs.cwd().openFile("test/pcm8_22050_mono.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/pcm8_22050_mono.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 22050), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 1), wav_decoder.channels());
@@ -370,11 +371,12 @@ test "pcm(bits=8) sample_rate=22050 channels=1" {
 test "pcm(bits=16) sample_rate=44100 channels=2" {
     const data_len: usize = 312542;
 
-    var file = try std.fs.cwd().openFile("test/pcm16_44100_stereo.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/pcm16_44100_stereo.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 44100), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 2), wav_decoder.channels());
@@ -393,11 +395,12 @@ test "pcm(bits=16) sample_rate=44100 channels=2" {
 }
 
 test "pcm(bits=24) sample_rate=48000 channels=1" {
-    var file = try std.fs.cwd().openFile("test/pcm24_48000_mono.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/pcm24_48000_mono.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 48000), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 1), wav_decoder.channels());
@@ -426,11 +429,12 @@ test "pcm(bits=24) sample_rate=48000 channels=1" {
 }
 
 test "pcm(bits=24) sample_rate=44100 channels=2" {
-    var file = try std.fs.cwd().openFile("test/pcm24_44100_stereo.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/pcm24_44100_stereo.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 44100), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 2), wav_decoder.channels());
@@ -453,11 +457,12 @@ test "pcm(bits=24) sample_rate=44100 channels=2" {
 }
 
 test "ieee_float(bits=32) sample_rate=48000 channels=2" {
-    var file = try std.fs.cwd().openFile("test/float32_48000_stereo.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/float32_48000_stereo.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 48000), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 2), wav_decoder.channels());
@@ -473,11 +478,12 @@ test "ieee_float(bits=32) sample_rate=48000 channels=2" {
 }
 
 test "ieee_float(bits=32) sample_rate=96000 channels=2" {
-    var file = try std.fs.cwd().openFile("test/float32_96000_stereo.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/float32_96000_stereo.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     try expectEqual(@as(usize, 96000), wav_decoder.sampleRate());
     try expectEqual(@as(usize, 2), wav_decoder.channels());
@@ -495,11 +501,12 @@ test "ieee_float(bits=32) sample_rate=96000 channels=2" {
 }
 
 test "error truncated" {
-    var file = try std.fs.cwd().openFile("test/error-trunc.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/error-trunc.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
     var buf: [3000]f32 = undefined;
 
@@ -510,11 +517,12 @@ test "error truncated" {
 }
 
 test "error data_size too big" {
-    var file = try std.fs.cwd().openFile("test/error-data_size1.wav", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test/error-data_size1.wav", .{});
+    defer file.close(io);
 
     var buffer: [1024]u8 = undefined;
-    var file_reader = file.reader(&buffer);
+    var file_reader = file.reader(io, &buffer);
     var wav_decoder = try decoder(&file_reader.interface);
 
     var buf: [1]u8 = undefined;

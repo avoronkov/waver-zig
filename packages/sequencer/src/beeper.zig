@@ -10,6 +10,8 @@ const Self = @This();
 const Allocator = std.mem.Allocator;
 
 allocator: Allocator,
+io: std.Io,
+clock: std.Io.Clock,
 tape: *Tape,
 startMicro: i64,
 periodMicro: i64,
@@ -22,12 +24,14 @@ log: ?*std.Io.Writer = null,
 
 pub fn init(
     allocator: Allocator,
+    io: std.Io,
+    clock: std.Io.Clock,
     file: []const u8,
     tape: *Tape,
     periodMicro: i64,
     stop: ?i64,
 ) !Self {
-    const prog = try Parser.parseFile(allocator, file);
+    const prog = try Parser.parseFile(allocator, io, file);
     var context = Context.init(allocator);
 
     const sc: usize = @intCast(prog.seqCounters);
@@ -35,8 +39,10 @@ pub fn init(
 
     return .{
         .allocator = allocator,
+        .io = io,
+        .clock = clock,
         .tape = tape,
-        .startMicro = std.time.microTimestamp(),
+        .startMicro = @truncate(clock.now(io).toMicroseconds()),
         .periodMicro = periodMicro,
         .periodFloat = @floatFromInt(periodMicro),
         .context = context,
@@ -73,7 +79,7 @@ pub fn run(self: *Self) !void {
         self.check_file_modified() catch |err| {
              std.log.err("Error checking file update: {t}", .{ err });
         };
-        self.sleep(bit);
+        try self.sleep(bit);
     }
     self.tape.stop();
 }
@@ -104,18 +110,18 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
     }
 }
 
-fn sleep(self: Self, frame: i64) void {
-    const dur_ns: u64 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - std.time.microTimestamp()));
+fn sleep(self: Self, frame: i64) !void {
+    const dur_ns: i96 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - self.clock.now(self.io).toMicroseconds()));
     std.log.debug("sleep frame [{}]: {} nano", .{frame, dur_ns});
-    std.Thread.sleep(dur_ns);
+    try self.io.sleep(.fromNanoseconds(dur_ns), .awake);
 }
 
 fn check_file_modified(self: *Self) !void {
-    const stat = try std.fs.cwd().statFile(self.file);
-    if (stat.mtime <= self.program.mtime) {
+    const stat = try std.Io.Dir.cwd().statFile(self.io, self.file, .{});
+    if (stat.mtime.toNanoseconds() <= self.program.mtime) {
         return;
     }
-    const prog = try Parser.parseFile(self.allocator, self.file);
+    const prog = try Parser.parseFile(self.allocator, self.io, self.file);
 
     const sc: usize = @intCast(prog.seqCounters);
     try self.context.initSeqCounters(sc);

@@ -20,7 +20,7 @@ pub fn init(a: Allocator, w: WaveInput) Self {
     return .{
         .allocator = a,
         .wf = w,
-        .filters = Filters{},
+        .filters = .empty,
     };
 }
 
@@ -38,7 +38,7 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn copy(self: *const Self) !Self {
-    var filters = Filters{};
+    var filters: Filters = .empty;
     for (self.filters.items) |fl| {
         const new_fl = try filter.copy_filter(self.allocator, fl);
         try filters.append(self.allocator, new_fl);

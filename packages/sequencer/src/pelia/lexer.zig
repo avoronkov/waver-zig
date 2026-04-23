@@ -79,8 +79,8 @@ allocator: Allocator,
 tokens: []Token,
 current: usize,
 
-pub fn init(a: Allocator, file: []const u8) !Self {
-    const content = try std.fs.cwd().readFileAlloc(a, file, 4 * 1024 * 1024);
+pub fn init(a: Allocator, io: std.Io, file: []const u8) !Self {
+    const content = try std.Io.Dir.cwd().readFileAlloc(io, file, a, std.Io.Limit.limited(4 * 1024 * 1024));
     defer a.free(content);
 
     const tokens = try parse_tokens(a, content);
@@ -129,7 +129,7 @@ fn free_tokens(a: Allocator, tokens: []Token) void {
 }
 
 fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
-    var list = std.ArrayListUnmanaged(Token){};
+    var list: std.ArrayListUnmanaged(Token) = .empty;
     errdefer {
         free_tokens(a, list.items);
         list.deinit(a);

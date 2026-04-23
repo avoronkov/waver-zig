@@ -24,7 +24,7 @@ input: f64 = 0,
 pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
-        .seqCounters = .{},
+        .seqCounters = .empty,
         .variables = null,
         .functions = null,
         .scaleFrequencies = &[_]f64{},

@@ -34,6 +34,8 @@ const TestChain = struct {
 };
 
 test "AM benchmark" {
+    const io = std.testing.io;
+    const clock = std.Io.Clock.real;
     const testChain = TestChain{};
     const chain = Chain.init(&testChain);
     const am = Am{ .freq = 16.0, .amp = 1.0 };
@@ -43,12 +45,12 @@ test "AM benchmark" {
         .dur = 0.25,
     };
 
-    const start = std.time.nanoTimestamp();
+    const start = clock.now(io);
     for (0..10000) |_| {
         _ = am.apply(chain, 1, 2.0, note) catch unreachable;
     }
-    const finish = std.time.nanoTimestamp();
-    const ns = @divFloor(finish - start, 10000);
+    const dur = start.untilNow(io, clock);
+    const ns = dur.toNanoseconds();
     std.debug.print("AM benchmark: {}ns per op\n", .{ns});
 }
 
@@ -62,6 +64,9 @@ pub const Exp = struct {
 };
 
 test "Exp benchmark" {
+    const io = std.testing.io;
+    const clock = std.Io.Clock.real;
+
     const testChain = TestChain{};
     const chain = Chain.init(&testChain);
     const exp = Exp{ .value = 4.0 };
@@ -71,12 +76,12 @@ test "Exp benchmark" {
         .dur = 0.25,
     };
 
-    const start = std.time.nanoTimestamp();
+    const start = clock.now(io);
     for (0..10000) |_| {
         _ = exp.apply(chain, 1, 2.0, note) catch unreachable;
     }
-    const finish = std.time.nanoTimestamp();
-    const ns = @divFloor(finish - start, 10000);
+    const dur = start.untilNow(io, clock);
+    const ns = dur.toNanoseconds();
     std.debug.print("Exp benchmark: {}ns per op\n", .{ns});
 }
 
@@ -125,6 +130,9 @@ pub const LispCode = struct {
 };
 
 test "LispCode benchmark" {
+    const io = std.testing.io;
+    const clock = std.Io.Clock.real;
+
     const primitives = @import("./pelia/primitives.zig");
     const testChain = TestChain{};
     const chain = Chain.init(&testChain);
@@ -143,12 +151,12 @@ test "LispCode benchmark" {
 
     const codeFilter = LispCode.init(std.testing.allocator, code);
 
-    const start = std.time.nanoTimestamp();
+    const start = clock.now(io);
     for (0..10000) |_| {
         _ = codeFilter.apply(chain, 1, 2.0, note) catch unreachable;
     }
-    const finish = std.time.nanoTimestamp();
-    const ns = @divFloor(finish - start, 10000);
+    const dur = start.untilNow(io, clock);
+    const ns = dur.toNanoseconds();
     std.debug.print("Exp benchmark [lisp]: {}ns per op\n", .{ns});
 }
 
