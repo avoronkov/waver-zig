@@ -4,20 +4,40 @@ const Beeper = @import("./beeper.zig");
 const rand = @import("./seq/rand.zig");
 const Args = @import("./args.zig");
 
-pub fn process_file(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, input_file: []const u8, log: *std.Io.Writer, stop: ?i64) !void {
-    rand.init(io, clock);
+pub const App = struct{
+    allocator: std.mem.Allocator,
+    io: std.Io,
+    clock: std.Io.Clock,
+    tape: Tape,
+    beeper: Beeper,
 
-    var tape = Tape.init(allocator);
-    defer tape.deinit();
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, input_file: []const u8, log: *std.Io.Writer, stop: ?i64) !App {
+        rand.init(io, clock);
 
-    var beeper = try Beeper.init(allocator, io, clock, input_file, &tape, 250 * 1000, stop);
-    defer beeper.deinit();
+        const tape = Tape.init(allocator);
 
-    beeper.log = log;
+        var beeper = try Beeper.init(allocator, io, clock, input_file, 250 * 1000, stop);
+        beeper.log = log;
 
-    var thread = try std.Thread.spawn(.{}, Beeper.run, .{&beeper});
-    defer thread.join();
-}
+        return .{
+            .allocator = allocator,
+            .io = io,
+            .clock = clock,
+            .tape = tape,
+            .beeper = beeper,
+        };
+    }
+
+    pub fn deinit(self: *App) void {
+        self.beeper.deinit();
+        self.tape.deinit();
+    }
+
+    pub fn run(self: *App) !std.Thread {
+        const thread = try std.Thread.spawn(.{}, Beeper.run, .{&self.beeper, &self.tape});
+        return thread;
+    }
+};
 
 test "01-seq.pelia" {
     const io = std.testing.io;
@@ -27,7 +47,11 @@ test "01-seq.pelia" {
     var buf: [4096]u8 = undefined;
     var stream = std.Io.Writer.fixed(&buf);
 
-    try process_file(allocator, io, clock, file, &stream, 8);
+    var app = try App.init(allocator, io, clock, file, &stream, 8);
+    defer app.deinit();
+
+    var t = try app.run();
+    t.join();
 
     const exp = 
         \\[0] 'in' freq=440, amp=0.75, dur=0.25

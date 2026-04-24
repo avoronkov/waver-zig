@@ -12,7 +12,6 @@ const Allocator = std.mem.Allocator;
 allocator: Allocator,
 io: std.Io,
 clock: std.Io.Clock,
-tape: *Tape,
 startMicro: i64,
 periodMicro: i64,
 periodFloat: f64,
@@ -27,7 +26,6 @@ pub fn init(
     io: std.Io,
     clock: std.Io.Clock,
     file: []const u8,
-    tape: *Tape,
     periodMicro: i64,
     stop: ?i64,
 ) !Self {
@@ -41,7 +39,6 @@ pub fn init(
         .allocator = allocator,
         .io = io,
         .clock = clock,
-        .tape = tape,
         .startMicro = @truncate(clock.now(io).toMicroseconds()),
         .periodMicro = periodMicro,
         .periodFloat = @floatFromInt(periodMicro),
@@ -57,7 +54,7 @@ pub fn deinit(self: *Self) void {
     self.context.deinit();
 }
 
-pub fn run(self: *Self) !void {
+pub fn run(self: *Self, tape: *Tape) !void {
     self.context.variables = &self.program.variables;
     self.context.functions = &self.program.functions;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
@@ -71,7 +68,7 @@ pub fn run(self: *Self) !void {
         }
         std.log.info("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
-             self.handle_signaler(s, bit) catch |err| {
+             self.handle_signaler(s, bit, tape) catch |err| {
                  std.log.err("Error: {t}", .{ err });
              };
         }
@@ -81,10 +78,10 @@ pub fn run(self: *Self) !void {
         };
         try self.sleep(bit);
     }
-    self.tape.stop();
+    tape.stop();
 }
 
-fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
+fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     self.context.bit = bit;
     self.context.realBit = bit;
     const signals = try s.signals(&self.context);
@@ -105,7 +102,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64) !void {
                 try log.print("[{d}] '{s}' freq={}, amp={}, dur={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, (durFloat * self.periodFloat / 1000000)});
                 try log.flush();
             }
-            try self.tape.append(w);
+            try tape.append(w);
         }
     }
 }

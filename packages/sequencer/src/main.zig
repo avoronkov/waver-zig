@@ -19,7 +19,11 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    try App.process_file(allocator, args.input, stdout, args.stop);
+    var app = try App.App.init(allocator, args.input, stdout, args.stop);
+    defer app.deinit();
+
+    var t = try app.run();
+    t.join();
 
     std.log.info("OK", .{});
 }

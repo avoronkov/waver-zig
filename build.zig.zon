@@ -11,6 +11,9 @@
             .url = "https://github.com/avoronkov/zig-wav/archive/refs/tags/v0.3.2.tar.gz",
             .hash = "wav-0.3.2-hrisqV9nAAAGB8EAChRDGBsoHVUWcn0YW_vgSkWY-Wy7",
         },
+        .sequencer = .{
+            .path = "./packages/sequencer",
+        },
     },
     .paths = .{
         "build.zig",
