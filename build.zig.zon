@@ -4,13 +4,9 @@
 
     .fingerprint = 0xf8b7c0b4439e15da, // Changing this has security and trust implications.
 
-    .minimum_zig_version = "0.15.2",
+    .minimum_zig_version = "0.16.0",
 
     .dependencies = .{
-        .wav = .{
-            .url = "https://github.com/avoronkov/zig-wav/archive/refs/tags/v0.3.2.tar.gz",
-            .hash = "wav-0.3.2-hrisqV9nAAAGB8EAChRDGBsoHVUWcn0YW_vgSkWY-Wy7",
-        },
         .sequencer = .{
             .path = "./packages/sequencer",
         },

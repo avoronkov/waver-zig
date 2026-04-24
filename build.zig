@@ -4,18 +4,29 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/c.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+    translate_c.linkSystemLibrary("libpulse-simple", .{});
+
     const mod = b.addModule("waver", .{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .imports = &.{
+            .{
+                .name = "c",
+                .module = translate_c.createModule(),
+            },
+        },
     });
 
     const exe = b.addExecutable(.{
         .name = "waver-zig",
         .root_module = mod,
     });
-    exe.linkLibC();
-    exe.linkSystemLibrary("libpulse-simple");
 
     const dsequencer = b.dependency("sequencer", .{
         .target = target,

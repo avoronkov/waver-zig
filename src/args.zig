@@ -7,15 +7,13 @@ allocator: Allocator,
 input: []const u8,
 stop: ?i64,
 
-pub fn init(a: std.mem.Allocator) !Self {
+pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
     var ss = try a.alloc(u8, 0);
     errdefer a.free(ss);
 
     var stop: ?i64 = null;
 
-    var args = try std.process.argsWithAllocator(a);
-    defer args.deinit();
-
+    var args = pargs.iterate();
     _ = args.next();
     while (args.next()) |ar| {
         if (std.mem.eql(u8, ar, "--stop")) {
