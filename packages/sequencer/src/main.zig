@@ -10,7 +10,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var app = try App.App.init(allocator, io, clock, init.minimal.args, stdout);
+    var app = try App.init(allocator, io, clock, init.minimal.args, stdout);
     defer app.deinit();
 
     app.beeper.setTempo(60);

@@ -27,6 +27,7 @@ pub fn deinit(self: Self) void {
     while (it) |node| {
         it = node.next;
         const wave: *Wave = @fieldParentPtr("node", node);
+        wave.wave.deinit();
         self.allocator.destroy(wave);
     }
 }
