@@ -18,6 +18,7 @@ variables: std.StringHashMapUnmanaged(Literal) = .{},
 functions: std.StringHashMapUnmanaged(Literal) = .{},
 scaleFrequencies: []const f64 = &[_]f64{},
 tempo: ?f64 = null,
+stop: ?i64 = null,
 
 pub fn init(a: Allocator) Self {
     return .{

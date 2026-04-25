@@ -420,6 +420,15 @@ fn parsePragma(self: *Self, prog: *Program) !void {
             };
         } else return error.unexpectedEof;
         prog.tempo = tempo;
+    }
+    else if (std.mem.eql(u8, pragma, "stop")) {
+        const stop: i64 = if (self.lexer.pop()) |tok| blk: {
+            break :blk switch (tok) {
+                .number => |n| n,
+                else => return error.unexpectedToken,
+            };
+        } else return error.unexpectedEof;
+        prog.stop = stop;
     } else {
         return error.unknownPragma;
     }
@@ -693,4 +702,21 @@ test "pragma tempo" {
     defer prog.deinit();
 
     try std.testing.expectEqual(prog.tempo, 144);
+}
+
+test "pragma stop" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+
+    const input =
+        \\% stop 82
+        \\
+    ;
+    var reader = std.Io.Reader.fixed(input);
+    var parser = try init(allocator, io, &reader, null);
+    defer parser.deinit();
+    var prog = try parser.parse();
+    defer prog.deinit();
+
+    try std.testing.expectEqual(prog.stop, 82);
 }

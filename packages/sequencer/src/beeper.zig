@@ -59,6 +59,9 @@ pub fn run(self: *Self, tape: *Tape) !void {
         std.log.info("Tempo = {}", .{tempo});
         self.setTempo(tempo);
     }
+    if (self.program.stop) |stop| {
+        self.stop = stop;
+    }
     var bit: i64 = 0;
     while (true) {
         const bit_start = self.clock.now(self.io);
@@ -146,6 +149,9 @@ fn check_file_modified(self: *Self) !void {
         if (self.program.tempo) |tempo| {
             std.log.info("Tempo = {}", .{tempo});
             self.setTempo(tempo);
+        }
+        if (self.program.stop) |stop| {
+            self.stop = stop;
         }
     }
 }
