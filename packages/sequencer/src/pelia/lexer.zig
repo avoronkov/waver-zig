@@ -79,11 +79,11 @@ allocator: Allocator,
 tokens: []Token,
 current: usize,
 
-pub fn init(a: Allocator, io: std.Io, file: []const u8) !Self {
-    const content = try std.Io.Dir.cwd().readFileAlloc(io, file, a, std.Io.Limit.limited(4 * 1024 * 1024));
-    defer a.free(content);
+pub fn init(a: Allocator, reader: *std.Io.Reader) !Self {
+    var content: [4 * 1024 * 1024]u8 = undefined;
+    const n = try reader.readSliceShort(&content);
 
-    const tokens = try parse_tokens(a, content);
+    const tokens = try parse_tokens(a, content[0..n]);
     std.log.debug("Lexer: tokens = {any}\n", .{tokens});
 
     return .{

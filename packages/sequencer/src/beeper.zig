@@ -55,6 +55,10 @@ pub fn run(self: *Self, tape: *Tape) !void {
     self.context.variables = &self.program.variables;
     self.context.functions = &self.program.functions;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
+    if (self.program.tempo) |tempo| {
+        std.log.info("Tempo = {}", .{tempo});
+        self.setTempo(tempo);
+    }
     var bit: i64 = 0;
     while (true) {
         const bit_start = self.clock.now(self.io);
@@ -123,19 +127,25 @@ fn sleep(self: Self, bit: i64, bit_start: std.Io.Timestamp) !void {
 }
 
 fn check_file_modified(self: *Self) !void {
-    const stat = try std.Io.Dir.cwd().statFile(self.io, self.file, .{});
-    if (stat.mtime.toNanoseconds() <= self.program.mtime) {
-        return;
+    if (self.program.mtime) |prog_mtime| {
+        const stat = try std.Io.Dir.cwd().statFile(self.io, self.file, .{});
+        if (stat.mtime.toNanoseconds() <= prog_mtime.toNanoseconds()) {
+            return;
+        }
+        const prog = try Parser.parseFile(self.allocator, self.io, self.file);
+
+        const sc: usize = @intCast(prog.seqCounters);
+        try self.context.initSeqCounters(sc);
+
+        self.program.deinit();
+        self.program = prog;
+
+        self.context.variables = &self.program.variables;
+        self.context.functions = &self.program.functions;
+        self.context.scaleFrequencies = self.program.scaleFrequencies;
+        if (self.program.tempo) |tempo| {
+            std.log.info("Tempo = {}", .{tempo});
+            self.setTempo(tempo);
+        }
     }
-    const prog = try Parser.parseFile(self.allocator, self.io, self.file);
-
-    const sc: usize = @intCast(prog.seqCounters);
-    try self.context.initSeqCounters(sc);
-
-    self.program.deinit();
-    self.program = prog;
-
-    self.context.variables = &self.program.variables;
-    self.context.functions = &self.program.functions;
-    self.context.scaleFrequencies = self.program.scaleFrequencies;
 }

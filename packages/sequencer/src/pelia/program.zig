@@ -10,13 +10,14 @@ const freeLiteral = literal.freeLiteral;
 const Self = @This();
 
 allocator: Allocator,
-mtime: i128 = 0,
+mtime: ?std.Io.Timestamp = null,
 instruments: std.StringHashMapUnmanaged(Instrument) = .{},
 signalers: std.ArrayListUnmanaged(Signaler) = .empty,
 seqCounters: i64 = 0,
 variables: std.StringHashMapUnmanaged(Literal) = .{},
 functions: std.StringHashMapUnmanaged(Literal) = .{},
 scaleFrequencies: []const f64 = &[_]f64{},
+tempo: ?f64 = null,
 
 pub fn init(a: Allocator) Self {
     return .{

@@ -8,7 +8,7 @@ Zig implementation of a musical programming language Pelia.
 
 [ ] "loop" function
 
-[ ] "tempo" pragma
+[X] "tempo" pragma
 
 [ ] wave filters...
 

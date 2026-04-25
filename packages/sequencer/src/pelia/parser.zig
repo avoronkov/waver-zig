@@ -73,31 +73,38 @@ const atoms = [_]struct {
 allocator: Allocator,
 io: std.Io,
 lexer: Lexer,
-mtime: i128,
+mtime: ?std.Io.Timestamp,
 definedVars: std.BufSet,
 definedFuncs: std.BufSet,
 seqCounters: i64 = 0,
 
-pub fn parseFile(a: Allocator, io: std.Io, file: []const u8) !Program {
+pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
     const clock = std.Io.Clock.real;
     const start = clock.now(io);
-    var parser = try init(a, io, file);
+
+    const stat = try std.Io.Dir.cwd().statFile(io, filename, .{});
+
+    const file = try std.Io.Dir.cwd().openFile(io, filename, .{});
+    var file_buffer: [1024]u8 = undefined;
+    var file_reader = file.reader(io, &file_buffer);
+
+    var parser = try init(a, io, &file_reader.interface, stat.mtime);
     defer parser.deinit();
     const result = try parser.parse();
     const dur = start.untilNow(io, clock);
-    std.log.info("parse_file took {}ns\n", .{dur.toNanoseconds()});
+    std.log.info("parse_file took {}ms\n", .{dur.toMicroseconds()});
     return result;
 }
 
-pub fn init(a: Allocator, io: std.Io, file: []const u8) !Self {
-    const stat = try std.Io.Dir.cwd().statFile(io, file, .{});
-    const lexer = try Lexer.init(a, io, file);
+pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Timestamp) !Self {
+    // const stat = try std.Io.Dir.cwd().statFile(io, file, .{});
+    const lexer = try Lexer.init(a, reader);
 
     return .{
         .allocator = a,
         .io = io,
         .lexer = lexer,
-        .mtime = stat.mtime.toNanoseconds(),
+        .mtime = mtime,
         .definedVars = std.BufSet.init(a),
         .definedFuncs = std.BufSet.init(a),
     };
@@ -120,7 +127,7 @@ pub fn parse(self: *Self) !Program {
             }
 
             switch (try self.nextStatementType()) {
-                .pragma => try self.parsePragma(),
+                .pragma => try self.parsePragma(&prog),
                 .regular => try self.parseRegularSt(&prog),
                 .assignment => try self.parseAssignment(&prog),
             }
@@ -394,9 +401,34 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
     }
 }
 
-fn parsePragma(self: *Self) !void {
-    _ = self;
-    return error.niy;
+fn parsePragma(self: *Self, prog: *Program) !void {
+    // Drop % (%% not supported)
+    self.lexer.drop();
+    const pragma = if (self.lexer.pop()) |tok| blk: {
+        break :blk switch (tok) {
+            .ident => |id| id,
+            else => return error.unexpectedToken,
+        };
+    } else return error.unexpectedEof;
+
+    if (std.mem.eql(u8, pragma, "tempo")) {
+        const tempo: f64 = if (self.lexer.pop()) |tok| blk: {
+            break :blk switch (tok) {
+                .float => |f| f,
+                .number => |n| @floatFromInt(n),
+                else => return error.unexpectedToken,
+            };
+        } else return error.unexpectedEof;
+        prog.tempo = tempo;
+    } else {
+        return error.unknownPragma;
+    }
+
+    if (self.lexer.pop()) |tok| {
+        if (tok != .eol and tok != .eof) {
+            return error.unexpectedToken;
+        }
+    }
 }
 
 fn parseRegularSt(
@@ -644,4 +676,21 @@ fn tokensEql(a: Lexer.Token, b: Lexer.Token) bool {
         .string => |s| std.mem.eql(u8, s, b.string),
         else => true,
     };
+}
+
+test "pragma tempo" {
+    const allocator = std.testing.allocator;
+    const io = std.testing.io;
+
+    const input =
+        \\% tempo 144
+        \\
+    ;
+    var reader = std.Io.Reader.fixed(input);
+    var parser = try init(allocator, io, &reader, null);
+    defer parser.deinit();
+    var prog = try parser.parse();
+    defer prog.deinit();
+
+    try std.testing.expectEqual(prog.tempo, 144);
 }
