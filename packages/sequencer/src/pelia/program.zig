@@ -11,11 +11,12 @@ const Self = @This();
 
 allocator: Allocator,
 mtime: ?std.Io.Timestamp = null,
-instruments: std.StringHashMapUnmanaged(Instrument) = .{},
+instruments: std.StringHashMapUnmanaged(Instrument) = .empty,
 signalers: std.ArrayListUnmanaged(Signaler) = .empty,
 seqCounters: i64 = 0,
-variables: std.StringHashMapUnmanaged(Literal) = .{},
-functions: std.StringHashMapUnmanaged(Literal) = .{},
+variables: std.StringHashMapUnmanaged(Literal) = .empty,
+functions: std.StringHashMapUnmanaged(Literal) = .empty,
+user_signalers: std.StringHashMapUnmanaged(Signaler) = .empty,
 scaleFrequencies: []const f64 = &[_]f64{},
 tempo: ?f64 = null,
 stop: ?i64 = null,
@@ -56,4 +57,11 @@ pub fn deinit(self: *Self) void {
         freeLiteral(self.allocator, pair.value_ptr.*);
     }
     self.functions.deinit(self.allocator);
+
+    // deinit user_signalers
+    var sigIter = self.user_signalers.iterator();
+    while (sigIter.next()) |pair| {
+        self.allocator.free(pair.key_ptr.*);
+        pair.value_ptr.deinit();
+    }
 }

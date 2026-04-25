@@ -13,7 +13,12 @@ const Self = @This();
 
 const Allocator = std.mem.Allocator;
 const SignalFilters = std.ArrayListUnmanaged(signal_filter.SignalFilter);
-const SignalFuncs = std.ArrayListUnmanaged(SignalFunc);
+
+const SignalFuncLike = union(enum) {
+    func: SignalFunc,
+    signaler: []const u8,
+};
+const SignalFuncs = std.ArrayListUnmanaged(SignalFuncLike);
 
 allocator: Allocator,
 signal_filters: SignalFilters,
@@ -31,7 +36,10 @@ pub fn deinit(self: *Self) void {
     self.signal_filters.deinit(self.allocator);
 
     for (self.signal_funcs.items) |*f| {
-        f.deinit(self.allocator);
+        switch (f.*) {
+            .func => |*fun| fun.deinit(self.allocator),
+            .signaler => |sg| self.allocator.free(sg),
+        }
     }
     self.signal_funcs.deinit(self.allocator);
 }
@@ -41,7 +49,11 @@ pub fn add_filter(self: *Self, f: signal_filter.SignalFilter) !void {
 }
 
 pub fn add_func(self: *Self, f: SignalFunc) !void {
-    try self.signal_funcs.append(self.allocator, f);
+    try self.signal_funcs.append(self.allocator, .{ .func =  f });
+}
+
+pub fn add_signaler(self: *Self, name: []const u8) !void {
+    try self.signal_funcs.append(self.allocator, .{ .signaler =  name });
 }
 
 pub fn signals(self: Self, ctx: *Context) !?Signals {
@@ -59,8 +71,13 @@ pub fn signals(self: Self, ctx: *Context) !?Signals {
     return try res.toOwnedSlice(self.allocator);
 }
 
-fn handle_signal(self: Self, res: *SignalList, f: SignalFunc, ctx: *Context) !void {
-    const sigs = try f.eval(self.allocator, ctx);
-    defer self.allocator.free(sigs);
-    try res.appendSlice(self.allocator, sigs);
+fn handle_signal(self: Self, res: *SignalList, f: SignalFuncLike, ctx: *Context) !void {
+    switch (f) {
+        .func => |fun| {
+            const sigs = try fun.eval(self.allocator, ctx);
+            defer self.allocator.free(sigs);
+            try res.appendSlice(self.allocator, sigs);
+        },
+        .signaler => return error.niy,
+    }
 }

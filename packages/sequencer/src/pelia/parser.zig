@@ -76,6 +76,7 @@ lexer: Lexer,
 mtime: ?std.Io.Timestamp,
 definedVars: std.BufSet,
 definedFuncs: std.BufSet,
+definedSignalers: std.BufSet,
 seqCounters: i64 = 0,
 
 pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
@@ -107,6 +108,7 @@ pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Tim
         .mtime = mtime,
         .definedVars = std.BufSet.init(a),
         .definedFuncs = std.BufSet.init(a),
+        .definedSignalers = std.BufSet.init(a),
     };
 }
 
@@ -114,6 +116,7 @@ pub fn deinit(self: *Self) void {
     self.lexer.deinit();
     self.definedVars.deinit();
     self.definedFuncs.deinit();
+    self.definedSignalers.deinit();
 }
 
 pub fn parse(self: *Self) !Program {
@@ -175,6 +178,9 @@ fn isIdentKnown(self: *const Self, ident: []const u8) bool {
         return true;
     }
     if (self.definedFuncs.contains(ident)) {
+        return true;
+    }
+    if (self.definedSignalers.contains(ident)) {
         return true;
     }
     return false;
@@ -448,6 +454,9 @@ fn parseRegularSt(
     try prog.signalers.append(self.allocator, signaler);
 }
 
+// var = <value>
+// func arg = <body>
+// sig == <signals>
 fn parseAssignment(
     self: *Self,
     prog: *Program,
@@ -463,6 +472,9 @@ fn parseAssignment(
     switch (t2) {
         .ident => |argname| {
             return self.parseFunctionAssignment(prog, name, argname);
+        },
+        .double_assign => {
+            return self.parseSignalerAssignment(prog, name);
         },
         else => {},
     }
@@ -512,6 +524,7 @@ fn parseAssignment(
     try prog.variables.put(self.allocator, key, atom);
 }
 
+// func arg = <body>
 fn parseFunctionAssignment(self: *Self, prog: *Program, name: []const u8, argname: []const u8) !void {
     const t3 = self.lexer.pop() orelse return error.unexpectedEof;
     if (t3 != .assign) {
@@ -522,6 +535,13 @@ fn parseFunctionAssignment(self: *Self, prog: *Program, name: []const u8, argnam
     const body = try literal.substitute(self.allocator, raw, .{ .ident = try primitives.Ident.init(argname) }, .arg);
     try prog.functions.put(prog.allocator, try prog.allocator.dupe(u8, name), body);
     try self.definedFuncs.insert(name);
+}
+
+// sig = <signaler>
+fn parseSignalerAssignment(self: *Self, prog: *Program, name: []const u8) !void {
+    const signaler = try self.parseSignaler(prog);
+    try prog.user_signalers.put(prog.allocator, try prog.allocator.dupe(u8, name), signaler);
+    try self.definedSignalers.insert(name);
 }
 
 fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {

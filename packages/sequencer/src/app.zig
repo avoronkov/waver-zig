@@ -140,7 +140,7 @@ test "01-seq.pelia" {
         .{
             .input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/09-bits-range.pelia" },
             .output =
-		\\[4] 'ins' freq=220, amp=0.75, bits=1
+                \\[4] 'ins' freq=220, amp=0.75, bits=1
                 \\[6] 'ins' freq=220, amp=0.75, bits=1
                 \\[8] 'ins' freq=220, amp=0.75, bits=1
                 \\[10] 'ins' freq=220, amp=0.75, bits=1
@@ -150,12 +150,23 @@ test "01-seq.pelia" {
         .{
             .input = &[_][*:0]const u8{ "self", "../../examples/11-stop.pelia" },
             .output =
-		\\[0] 'sine' freq=369.99442271162945, amp=0.75, bits=1
-		\\[2] 'sine' freq=369.99442271162945, amp=0.75, bits=1
-		\\[4] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+                \\[0] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+                \\[2] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+                \\[4] 'sine' freq=369.99442271162945, amp=0.75, bits=1
                 \\
             ,
         },
+
+        // .{
+        //     .input = &[_][*:0]const u8{ "self", "../../examples/12-user-signalers.pelia" },
+        //     .output =
+        //         \\[0] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+        //         \\[2] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+        //         \\[4] 'sine' freq=369.99442271162945, amp=0.75, bits=1
+        //         \\
+        //     ,
+        // },
+
     };
 
     for (tests) |ts| {
