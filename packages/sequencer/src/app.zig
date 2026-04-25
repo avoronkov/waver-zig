@@ -10,19 +10,32 @@ pub const App = struct{
     clock: std.Io.Clock,
     tape: Tape,
     beeper: Beeper,
+    args: Args,
 
-    pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, input_file: []const u8, log: *std.Io.Writer, stop: ?i64) !App {
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs: std.process.Args, log: *std.Io.Writer) !App {
+        const args = try Args.init(allocator, pargs);
+        errdefer args.deinit();
+
+        if (args.input.len == 0) {
+            std.log.err("No input file specified.\n", .{});
+            return error.noInput;
+        }
+
         rand.init(io, clock);
 
         const tape = Tape.init(allocator);
+        errdefer tape.deinit();
 
-        var beeper = try Beeper.init(allocator, io, clock, input_file, stop);
+        var beeper = try Beeper.init(allocator, io, clock, args.input, args.stop);
+        errdefer beeper.deinit();
+
         beeper.log = log;
 
         return .{
             .allocator = allocator,
             .io = io,
             .clock = clock,
+            .args = args,
             .tape = tape,
             .beeper = beeper,
         };
@@ -31,6 +44,7 @@ pub const App = struct{
     pub fn deinit(self: *App) void {
         self.beeper.deinit();
         self.tape.deinit();
+        self.args.deinit();
     }
 
     pub fn run(self: *App) !std.Thread {
@@ -43,11 +57,14 @@ test "01-seq.pelia" {
     const io = std.testing.io;
     const clock = std.Io.Clock.real;
     const allocator = std.testing.allocator;
-    const file = "../../examples/01-seq.pelia";
+
+    const vector = [_][*:0]const u8{ "self", "--stop", "8", "../../examples/01-seq.pelia" };
+    const pargs: std.process.Args = .{ .vector = &vector };
+
     var buf: [4096]u8 = undefined;
     var stream = std.Io.Writer.fixed(&buf);
 
-    var app = try App.init(allocator, io, clock, file, &stream, 8);
+    var app = try App.init(allocator, io, clock, pargs, &stream);
     defer app.deinit();
 
     var t = try app.run();

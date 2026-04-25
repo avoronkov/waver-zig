@@ -71,7 +71,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
         }
         bit += 1;
         self.check_file_modified() catch |err| {
-             std.log.err("Error checking file update: {t}", .{ err });
+             std.log.err("Error checking file update '{s}': {t}", .{ self.file, err });
         };
         try self.sleep(bit);
     }

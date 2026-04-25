@@ -1,20 +1,9 @@
 const std = @import("std");
 const pulse = @import("./pulse.zig");
-const Args = @import("./args.zig");
-
 const sequencer = @import("sequencer");
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
-
-    const args = try Args.init(allocator, init.minimal.args);
-    defer args.deinit();
-
-    if (args.input.len == 0) {
-        std.log.err("No input file specified.\n", .{});
-        return error.noInput;
-    }
-
     const io = init.io;
     const clock = std.Io.Clock.real;
 
@@ -22,7 +11,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var app = try sequencer.App.init(allocator, io, clock, args.input, stdout, args.stop);
+    var app = try sequencer.App.init(allocator, io, clock, init.minimal.args, stdout);
     defer app.deinit();
 
     app.beeper.setTempo(60);
