@@ -16,7 +16,7 @@ pub const App = struct{
 
         const tape = Tape.init(allocator);
 
-        var beeper = try Beeper.init(allocator, io, clock, input_file, 250 * 1000, stop);
+        var beeper = try Beeper.init(allocator, io, clock, input_file, stop);
         beeper.log = log;
 
         return .{
@@ -54,10 +54,10 @@ test "01-seq.pelia" {
     t.join();
 
     const exp = 
-        \\[0] 'in' freq=440, amp=0.75, dur=0.25
-        \\[2] 'in' freq=330, amp=0.75, dur=0.25
-        \\[4] 'in' freq=440, amp=0.75, dur=0.25
-        \\[6] 'in' freq=330, amp=0.75, dur=0.25
+        \\[0] 'in' freq=440, amp=0.75, bits=1
+        \\[2] 'in' freq=330, amp=0.75, bits=1
+        \\[4] 'in' freq=440, amp=0.75, bits=1
+        \\[6] 'in' freq=330, amp=0.75, bits=1
         \\
     ;
 

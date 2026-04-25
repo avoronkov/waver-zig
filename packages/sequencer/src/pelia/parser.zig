@@ -498,7 +498,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             .ident => |id| {
                 if (filter.filters.get(id)) |fl| {
                     self.lexer.drop();
-                    std.log.err("Add filter {s}\n", .{id});
+                    std.log.info("Add filter {s}\n", .{id});
                     var flt = fl;
                     try self.parseInstrumentFilterParams(&flt);
                     try in.add_filter(flt);

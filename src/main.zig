@@ -25,6 +25,8 @@ pub fn main(init: std.process.Init) !void {
     var app = try sequencer.App.init(allocator, io, clock, args.input, stdout, args.stop);
     defer app.deinit();
 
+    app.beeper.setTempo(60);
+
     const s = try pulse.paSimpleNew();
     defer pulse.paSimpleFree(s);
 

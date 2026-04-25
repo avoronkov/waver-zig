@@ -13,8 +13,7 @@ allocator: Allocator,
 io: std.Io,
 clock: std.Io.Clock,
 startMicro: i64,
-periodMicro: i64,
-periodFloat: f64,
+periodMicro: ?i64,
 context: Context,
 program: Program,
 file: []const u8,
@@ -26,7 +25,6 @@ pub fn init(
     io: std.Io,
     clock: std.Io.Clock,
     file: []const u8,
-    periodMicro: i64,
     stop: ?i64,
 ) !Self {
     const prog = try Parser.parseFile(allocator, io, file);
@@ -40,8 +38,7 @@ pub fn init(
         .io = io,
         .clock = clock,
         .startMicro = @truncate(clock.now(io).toMicroseconds()),
-        .periodMicro = periodMicro,
-        .periodFloat = @floatFromInt(periodMicro),
+        .periodMicro = null,
         .context = context,
         .program = prog,
         .file = file,
@@ -81,25 +78,33 @@ pub fn run(self: *Self, tape: *Tape) !void {
     tape.stop();
 }
 
+pub fn setTempo(self: *Self, tempo: f64) void {
+    const periodMicro: i64 = @intFromFloat(60000000 / tempo / 4);
+    self.periodMicro = periodMicro;
+    std.log.debug("Set tempo {}, periodMicro = {}", .{tempo, periodMicro});
+}
+
 fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     self.context.bit = bit;
     self.context.realBit = bit;
     const signals = try s.signals(&self.context);
     if (signals) |sigs| {
         defer self.allocator.free(sigs);
+        const periodFloat: f64 = @floatFromInt(if (self.periodMicro) |value| value else 0);
         for (sigs) |sig| {
             var inst = self.program.instruments.get(sig.instrument.string()) orelse {
                 std.log.err("Instrument not found: {s}", .{sig.instrument.string()});
                 return error.NotFound;
             };
             const durFloat: f64 = @floatFromInt(sig.duration_bits);
+            const durSec: f64 = durFloat * periodFloat / 1000000;
             const w = try inst.wave(.{
                 .freq = sig.freq,
                 .amp = sig.amplitude,
-                .dur = durFloat * self.periodFloat / 1000000,
+                .dur = durSec,
             }, null);
             if (self.log) |log| {
-                try log.print("[{d}] '{s}' freq={}, amp={}, dur={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, (durFloat * self.periodFloat / 1000000)});
+                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, sig.duration_bits});
                 try log.flush();
             }
             try tape.append(w);
@@ -108,9 +113,11 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
 }
 
 fn sleep(self: Self, frame: i64) !void {
-    const dur_ns: i96 = @intCast(1000 * (self.startMicro + (frame * self.periodMicro) - self.clock.now(self.io).toMicroseconds()));
-    std.log.debug("sleep frame [{}]: {} nano", .{frame, dur_ns});
-    try self.io.sleep(.fromNanoseconds(dur_ns), .awake);
+    if (self.periodMicro) |periodMicro| {
+        const dur_ns: i96 = @intCast(1000 * (self.startMicro + (frame * periodMicro) - self.clock.now(self.io).toMicroseconds()));
+        std.log.debug("sleep frame [{}]: {} nano", .{frame, dur_ns});
+        try self.io.sleep(.fromNanoseconds(dur_ns), .awake);
+    }
 }
 
 fn check_file_modified(self: *Self) !void {
