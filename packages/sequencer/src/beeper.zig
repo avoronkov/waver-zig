@@ -13,7 +13,7 @@ allocator: Allocator,
 io: std.Io,
 clock: std.Io.Clock,
 startMicro: i64,
-periodMicro: ?i64,
+periodMicro: ?std.Io.Duration,
 context: Context,
 program: Program,
 file: []const u8,
@@ -57,6 +57,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
     self.context.scaleFrequencies = self.program.scaleFrequencies;
     var bit: i64 = 0;
     while (true) {
+        const bit_start = self.clock.now(self.io);
         if (self.stop) |stop| {
             if (bit >= stop) {
                 std.log.info("Stopping on bit {}", .{bit});
@@ -73,13 +74,13 @@ pub fn run(self: *Self, tape: *Tape) !void {
         self.check_file_modified() catch |err| {
              std.log.err("Error checking file update '{s}': {t}", .{ self.file, err });
         };
-        try self.sleep(bit);
+        try self.sleep(bit, bit_start);
     }
     tape.stop();
 }
 
 pub fn setTempo(self: *Self, tempo: f64) void {
-    const periodMicro: i64 = @intFromFloat(60000000 / tempo / 4);
+    const periodMicro = std.Io.Duration.fromMicroseconds(@intFromFloat(60000000 / tempo / 4));
     self.periodMicro = periodMicro;
     std.log.debug("Set tempo {}, periodMicro = {}", .{tempo, periodMicro});
 }
@@ -90,7 +91,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     const signals = try s.signals(&self.context);
     if (signals) |sigs| {
         defer self.allocator.free(sigs);
-        const periodFloat: f64 = @floatFromInt(if (self.periodMicro) |value| value else 0);
+        const periodFloat: f64 = @floatFromInt(if (self.periodMicro) |value| value.toMicroseconds() else 0);
         for (sigs) |sig| {
             var inst = self.program.instruments.get(sig.instrument.string()) orelse {
                 std.log.err("Instrument not found: {s}", .{sig.instrument.string()});
@@ -112,11 +113,12 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     }
 }
 
-fn sleep(self: Self, frame: i64) !void {
+fn sleep(self: Self, bit: i64, bit_start: std.Io.Timestamp) !void {
     if (self.periodMicro) |periodMicro| {
-        const dur_ns: i96 = @intCast(1000 * (self.startMicro + (frame * periodMicro) - self.clock.now(self.io).toMicroseconds()));
-        std.log.debug("sleep frame [{}]: {} nano", .{frame, dur_ns});
-        try self.io.sleep(.fromNanoseconds(dur_ns), .awake);
+        const finish = bit_start.addDuration(periodMicro);
+        const dur_ns = self.clock.now(self.io).durationTo(finish);
+        std.log.debug("sleep frame [{}]: {} nano", .{bit, dur_ns.toNanoseconds()});
+        try self.io.sleep(dur_ns, .awake);
     }
 }
 
