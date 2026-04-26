@@ -24,6 +24,7 @@ pub const Token = union(enum) {
     right_square_bracket,
     vertical_bar,
     double_dot,
+    underscore,
     number: i64,
     float: f64,
     eol,
@@ -69,6 +70,7 @@ const literalTokens = [_]LiteralToken{
     .{ .l = "]", .t = .right_square_bracket },
     .{ .l = "|", .t = .vertical_bar },
     .{ .l = "..", .t = .double_dot },
+    .{ .l = "_", .t = .underscore },
     .{ .l = "\n", .t = .eol },
     .{ .l = "%%", .t = .double_percent },
     .{ .l = "%", .t = .percent },
@@ -182,7 +184,7 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
             i += res.offset;
             continue :LOOP;
         }
-
+        std.log.err("Unknown token here: {s}", .{ content[i..(i+64)]});
         return error.UnknownToken;
     }
 

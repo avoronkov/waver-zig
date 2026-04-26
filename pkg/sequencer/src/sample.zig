@@ -3,6 +3,8 @@ const wav = @import("wav");
 const Note = @import("./note.zig");
 const EofError = @import("./wave.zig").EofError;
 
+const samples = @import("samples").resources;
+
 const Allocator = std.mem.Allocator;
 
 pub const Sample = struct {
@@ -35,13 +37,33 @@ pub const Sample = struct {
 };
 
 pub fn parseSampleFile(a: Allocator, io: std.Io, filename: []const u8) !Sample {
+    return parseFsFile(a, io, filename) catch |err| {
+        if (err == error.FileNotFound) {
+            return parseEmbededFile(a, filename);
+        }
+        return err;
+    };
+}
+
+fn parseFsFile(a: Allocator, io: std.Io, filename: []const u8) !Sample {
     var file = try std.Io.Dir.cwd().openFile(io, filename, .{});
     defer file.close(io);
 
-
     var file_buffer: [1024]u8 = undefined;
     var file_reader = file.reader(io, &file_buffer);
-    var decoder = try wav.decoder(&file_reader.interface);
+    return parseWavReader(a, &file_reader.interface);
+}
+
+fn parseEmbededFile(a: Allocator, filename: []const u8) !Sample {
+    if (samples.get(filename)) |content| {
+        var reader = std.Io.Reader.fixed(content);
+        return parseWavReader(a, &reader);
+    }
+    return error.FileNotFound;
+}
+
+fn parseWavReader(a: Allocator, reader: *std.Io.Reader) !Sample {
+    var decoder = try wav.decoder(reader);
 
     var data: std.ArrayListUnmanaged(f32) = .empty;
     errdefer data.deinit(a);

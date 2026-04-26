@@ -16,7 +16,7 @@ Zig implementation of a musical programming language Pelia.
 
 [ ] euclidian rhythms
 
-[ ] embedeb samples
+[X] embedeb samples
 
 [ ] srand pragma
 

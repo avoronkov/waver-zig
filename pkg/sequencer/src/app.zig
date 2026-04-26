@@ -165,7 +165,16 @@ test "01-seq.pelia" {
                 \\
             ,
         },
-
+        .{
+            .input = &[_][*:0]const u8{ "self", "../../examples/13-embeded-sample.pelia" },
+            .output =
+                \\[0] 'Kick' freq=0, amp=0.75, bits=1
+                \\[2] 'Kick' freq=0, amp=0.75, bits=1
+                \\[4] 'Kick' freq=0, amp=0.75, bits=1
+                \\[6] 'Kick' freq=0, amp=0.75, bits=1
+                \\
+            ,
+        },
     };
 
     for (tests) |ts| {

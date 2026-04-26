@@ -4,6 +4,21 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const tool = b.addExecutable(.{
+        .name = "generate_struct",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/tools/generate_dir_index.zig"),
+            .target = b.graph.host,
+        }),
+    });
+
+    var tool_step = b.addRunArtifact(tool);
+    tool_step.addDirectoryArg(b.path("res/waver-samples/samples"));
+    const output = tool_step.addOutputFileArg("samples.zig");
+
+    const gen_step = b.step("gen", "Generate resources");
+    gen_step.dependOn(&tool_step.step);
+
     const dwav = b.dependency("wav", .{
         .target = target,
         .optimize = optimize,
@@ -16,12 +31,16 @@ pub fn build(b: *std.Build) void {
             .{ .name = "wav", .module = dwav },
         },
     });
+    mod.addAnonymousImport("samples", .{
+        .root_source_file = output,
+    });
 
     const lib = b.addLibrary(.{
         .linkage = .static,
         .name = "sequencer",
         .root_module = mod,
     });
+    lib.step.dependOn(&tool_step.step);
     b.installArtifact(lib);
 
     const test_mod = b.addModule("test_sequencer", .{
@@ -30,6 +49,9 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "wav", .module = dwav },
         },
+    });
+    test_mod.addAnonymousImport("samples", .{
+        .root_source_file = output,
     });
 
     const mod_tests = b.addTest(.{
@@ -51,6 +73,9 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "sequencer",
         .root_module = exe_mod,
+    });
+    exe.root_module.addAnonymousImport("samples", .{
+        .root_source_file = output,
     });
     b.installArtifact(exe);
 

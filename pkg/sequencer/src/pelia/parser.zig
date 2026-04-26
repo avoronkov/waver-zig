@@ -460,6 +460,7 @@ fn parsePragma(self: *Self, prog: *Program) !void {
         } else return error.unexpectedEof;
         prog.stop = stop;
     } else {
+        std.log.err("Unknown pragma: {s}", .{pragma});
         return error.unknownPragma;
     }
 
