@@ -1,6 +1,6 @@
 .{
     .name = .waver,
-    .version = "0.1.0",
+    .version = "0.2.0",
 
     .fingerprint = 0xf8b7c0b4439e15da, // Changing this has security and trust implications.
 
@@ -8,7 +8,7 @@
 
     .dependencies = .{
         .sequencer = .{
-            .path = "./packages/sequencer",
+            .path = "./pkg/sequencer",
         },
     },
     .paths = .{
