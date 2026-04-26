@@ -1,5 +1,6 @@
 const std = @import("std");
 const Literal = @import("./literal.zig").Literal;
+const Signaler = @import("../seq/signaler.zig");
 
 const Allocator = std.mem.Allocator;
 const SeqCounters = std.ArrayListUnmanaged(usize);
@@ -10,8 +11,9 @@ const Self = @This();
 allocator: Allocator,
 
 seqCounters: SeqCounters,
-variables: ?*const Variables,
-functions: ?*const Variables,
+variables: ?*const Variables = null,
+functions: ?*const Variables = null,
+user_signalers: ?*const std.StringHashMapUnmanaged(Signaler) = null,
 
 scaleFrequencies: []const f64,
 
@@ -25,8 +27,6 @@ pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
         .seqCounters = .empty,
-        .variables = null,
-        .functions = null,
         .scaleFrequencies = &[_]f64{},
     };
 }

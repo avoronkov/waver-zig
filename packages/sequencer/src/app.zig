@@ -156,16 +156,15 @@ test "01-seq.pelia" {
                 \\
             ,
         },
-
-        // .{
-        //     .input = &[_][*:0]const u8{ "self", "../../examples/12-user-signalers.pelia" },
-        //     .output =
-        //         \\[0] 'sine' freq=369.99442271162945, amp=0.75, bits=1
-        //         \\[2] 'sine' freq=369.99442271162945, amp=0.75, bits=1
-        //         \\[4] 'sine' freq=369.99442271162945, amp=0.75, bits=1
-        //         \\
-        //     ,
-        // },
+        .{
+            .input = &[_][*:0]const u8{ "self", "../../examples/12-user-signalers.pelia" },
+            .output =
+                \\[4] 'sine' freq=246.94165062806425, amp=0.75, bits=1
+                \\[6] 'sine' freq=246.94165062806425, amp=0.75, bits=1
+                \\[8] 'sine' freq=246.94165062806425, amp=0.75, bits=1
+                \\
+            ,
+        },
 
     };
 

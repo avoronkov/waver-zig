@@ -98,7 +98,6 @@ pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
 }
 
 pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Timestamp) !Self {
-    // const stat = try std.Io.Dir.cwd().statFile(io, file, .{});
     const lexer = try Lexer.init(a, reader);
 
     return .{
@@ -196,6 +195,31 @@ fn parseSignaler(
     try self.parseSignalFilters(&s);
 
     try self.checkWaveformUsed(prog);
+
+    if (self.lexer.top()) |tk| {
+        switch (tk) {
+            .ident => |id| {
+                if (self.definedSignalers.contains(id)) {
+                    self.lexer.drop();
+                    try s.add_signaler(id);
+                    // TODO copypaste
+                    if (self.lexer.pop()) |tok| {
+                        switch (tok) {
+                            .eol => return s,
+                            .eof => return s,
+                            else => return {
+                                std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
+                                return error.unexpectedToken;
+                            },
+                        }
+                    } else {
+                        return error.unexpectedEof;
+                    }
+                }
+            },
+            else => {},
+        }
+    }
 
     const inst = try self.parseAtom();
     const freq: Literal = if (self.lexer.top()) |tok| blk: {

@@ -53,10 +53,12 @@ pub fn add_func(self: *Self, f: SignalFunc) !void {
 }
 
 pub fn add_signaler(self: *Self, name: []const u8) !void {
-    try self.signal_funcs.append(self.allocator, .{ .signaler =  name });
+    try self.signal_funcs.append(self.allocator, .{ .signaler =  try self.allocator.dupe(u8, name) });
 }
 
-pub fn signals(self: Self, ctx: *Context) !?Signals {
+const SignalsErrors = error{OutOfMemory,emptyList,badValue,badAmplitude,badDuration,badFrequency,badInstrument};
+
+pub fn signals(self: Self, ctx: *Context) SignalsErrors!?Signals {
     for (self.signal_filters.items) |filt| {
         if (!signal_filter.apply(filt, ctx)) {
             return null;
@@ -71,13 +73,23 @@ pub fn signals(self: Self, ctx: *Context) !?Signals {
     return try res.toOwnedSlice(self.allocator);
 }
 
-fn handle_signal(self: Self, res: *SignalList, f: SignalFuncLike, ctx: *Context) !void {
+fn handle_signal(self: Self, res: *SignalList, f: SignalFuncLike, ctx: *Context) SignalsErrors!void {
     switch (f) {
         .func => |fun| {
             const sigs = try fun.eval(self.allocator, ctx);
             defer self.allocator.free(sigs);
             try res.appendSlice(self.allocator, sigs);
         },
-        .signaler => return error.niy,
+        .signaler => |name| {
+            if (ctx.user_signalers) |us| {
+                if (us.get(name)) |sig| {
+                    const sub_signals = try sig.signals(ctx);
+                    if (sub_signals) |sigs| {
+                        defer self.allocator.free(sigs);
+                        try res.appendSlice(self.allocator, sigs);
+                    }
+                }
+            }
+        },
     }
 }

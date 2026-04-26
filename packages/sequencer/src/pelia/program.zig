@@ -64,4 +64,5 @@ pub fn deinit(self: *Self) void {
         self.allocator.free(pair.key_ptr.*);
         pair.value_ptr.deinit();
     }
+    self.user_signalers.deinit(self.allocator);
 }

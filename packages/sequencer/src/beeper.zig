@@ -54,14 +54,18 @@ pub fn deinit(self: *Self) void {
 pub fn run(self: *Self, tape: *Tape) !void {
     self.context.variables = &self.program.variables;
     self.context.functions = &self.program.functions;
+    self.context.user_signalers = &self.program.user_signalers;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
+
     if (self.program.tempo) |tempo| {
         std.log.info("Tempo = {}", .{tempo});
         self.setTempo(tempo);
     }
+
     if (self.program.stop) |stop| {
         self.stop = stop;
     }
+
     var bit: i64 = 0;
     while (true) {
         const bit_start = self.clock.now(self.io);
