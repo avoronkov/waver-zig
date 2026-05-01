@@ -1,6 +1,6 @@
 const std = @import("std");
 const pulse = @import("./pulse.zig");
-const sequencer = @import("sequencer");
+const seq = @import("seq");
 
 pub fn main(init: std.process.Init) !void {
     const allocator = init.gpa;
@@ -11,7 +11,7 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var app = try sequencer.init(allocator, io, clock, init.minimal.args, stdout);
+    var app = try seq.init(allocator, io, clock, init.minimal.args, stdout);
     defer app.deinit();
 
     app.beeper.setTempo(60);

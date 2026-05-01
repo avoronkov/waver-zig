@@ -24,7 +24,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     }).module("wav");
 
-    const mod = b.addModule("sequencer", .{
+    const mod = b.addModule("seq", .{
         .root_source_file = b.path("src/app.zig"),
         .target = target,
         .imports = &.{
@@ -37,13 +37,13 @@ pub fn build(b: *std.Build) void {
 
     const lib = b.addLibrary(.{
         .linkage = .static,
-        .name = "sequencer",
+        .name = "seq",
         .root_module = mod,
     });
     lib.step.dependOn(&tool_step.step);
     b.installArtifact(lib);
 
-    const test_mod = b.addModule("test_sequencer", .{
+    const test_mod = b.addModule("test_seq", .{
         .root_source_file = b.path("src/tests.zig"),
         .target = target,
         .imports = &.{
@@ -71,7 +71,7 @@ pub fn build(b: *std.Build) void {
         },
     });
     const exe = b.addExecutable(.{
-        .name = "sequencer",
+        .name = "seq",
         .root_module = exe_mod,
     });
     exe.root_module.addAnonymousImport("samples", .{

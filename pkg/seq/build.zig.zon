@@ -1,8 +1,8 @@
 .{
-    .name = .sequencer,
+    .name = .seq,
     .version = "0.0.0",
-    .fingerprint = 0xc0e7800a2618b119, // Changing this has security and trust implications.
-    .minimum_zig_version = "0.15.2",
+    .fingerprint = 0x967ed1532c8dc1a9, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.16.0",
     .dependencies = .{
         .wav = .{
             .path = "../wav",

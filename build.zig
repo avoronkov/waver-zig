@@ -28,12 +28,12 @@ pub fn build(b: *std.Build) void {
         .root_module = mod,
     });
 
-    const dsequencer = b.dependency("sequencer", .{
+    const dseq = b.dependency("seq", .{
         .target = target,
         .optimize = optimize,
-    }).module("sequencer");
+    }).module("seq");
 
-    exe.root_module.addImport("sequencer", dsequencer);
+    exe.root_module.addImport("seq", dseq);
 
     b.installArtifact(exe);
 

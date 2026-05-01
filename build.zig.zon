@@ -7,8 +7,8 @@
     .minimum_zig_version = "0.16.0",
 
     .dependencies = .{
-        .sequencer = .{
-            .path = "./pkg/sequencer",
+        .seq = .{
+            .path = "./pkg/seq",
         },
     },
     .paths = .{
