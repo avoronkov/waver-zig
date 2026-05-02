@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub const code = @embedFile("./edo12.pelia");
+
 pub const notes = std.StaticStringMap(i64).initComptime(.{
     .{ "C1", 1 },
     .{ "Cs1", 2 },

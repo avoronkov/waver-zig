@@ -20,7 +20,7 @@ const Literal = literal.Literal;
 
 const Self = @This();
 
-const StatementType = enum { pragma, assignment, regular };
+const StatementType = enum { pragma, assignment, regular, eof };
 
 const SignalFilterParser = *const fn (self: *Self) ParseError!signal_filter.SignalFilter;
 
@@ -91,10 +91,16 @@ pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
 
     var parser = try init(a, io, &file_reader.interface, stat.mtime);
     defer parser.deinit();
-    const result = try parser.parse();
+
+    var prog = Program.init(a);
+    errdefer prog.deinit();
+
+    try parser.parse(&prog);
+
     const dur = start.untilNow(io, clock);
     std.log.info("parse_file took {}ms\n", .{dur.toMicroseconds()});
-    return result;
+
+    return prog;
 }
 
 pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Timestamp) !Self {
@@ -118,10 +124,7 @@ pub fn deinit(self: *Self) void {
     self.definedSignalers.deinit();
 }
 
-pub fn parse(self: *Self) !Program {
-    var prog = Program.init(self.allocator);
-    errdefer prog.deinit();
-
+fn parseInner(self: *Self, prog: *Program) !void {
     LOOP: while (true) {
         if (self.lexer.top()) |tok| {
             if (tok == Lexer.Token.eof) {
@@ -129,25 +132,36 @@ pub fn parse(self: *Self) !Program {
             }
 
             switch (try self.nextStatementType()) {
-                .pragma => try self.parsePragma(&prog),
-                .regular => try self.parseRegularSt(&prog),
-                .assignment => try self.parseAssignment(&prog),
+                .pragma => try self.parsePragma(prog),
+                .regular => try self.parseRegularSt(prog),
+                .assignment => try self.parseAssignment(prog),
+                .eof => break :LOOP,
             }
         } else {
             break :LOOP;
         }
     }
+}
+
+pub fn parse(self: *Self, prog: *Program) !void {
+    try self.parseInner(prog);
 
     for (edo12.notes.keys()) |key| {
         const value = edo12.notes.get(key) orelse std.debug.panic("Edo12 key not found: {s}\n", .{key});
         try prog.variables.put(self.allocator, try self.allocator.dupe(u8, key), Literal{ .number = value });
     }
 
+    // Parse edo12 scale functions
+    // std.debug.print("edo12: {s}\n", .{edo12.code});
+    // var reader = std.Io.Reader.fixed(edo12.code);
+    // var parser = try init(self.allocator, self.io, &reader, null);
+    // defer parser.deinit();
+
+    // try parser.parseInner(prog);
+
     prog.seqCounters = self.seqCounters;
     prog.scaleFrequencies = &edo12.frequencies;
     prog.mtime = self.mtime;
-
-    return prog;
 }
 
 fn nextStatementType(self: *Self) !StatementType {
@@ -158,6 +172,10 @@ fn nextStatementType(self: *Self) !StatementType {
             break tok;
         }
     } else return error.unexpectedEof;
+
+    if (token == .eof) {
+        return .eof;
+    }
 
     if (token == .percent or token == .double_percent) {
         return .pragma;
@@ -743,8 +761,10 @@ test "pragma tempo" {
     var reader = std.Io.Reader.fixed(input);
     var parser = try init(allocator, io, &reader, null);
     defer parser.deinit();
-    var prog = try parser.parse();
+    var prog = Program.init(allocator);
     defer prog.deinit();
+
+    try parser.parse(&prog);
 
     try std.testing.expectEqual(prog.tempo, 144);
 }
@@ -760,8 +780,10 @@ test "pragma stop" {
     var reader = std.Io.Reader.fixed(input);
     var parser = try init(allocator, io, &reader, null);
     defer parser.deinit();
-    var prog = try parser.parse();
+    var prog = Program.init(allocator);
     defer prog.deinit();
+
+    try parser.parse(&prog);
 
     try std.testing.expectEqual(prog.stop, 82);
 }
