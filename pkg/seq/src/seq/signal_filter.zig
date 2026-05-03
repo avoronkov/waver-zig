@@ -5,6 +5,7 @@ pub const Every = struct {
     n: i64,
 
     pub fn apply(self: Every, ctx: *Context) bool {
+        ctx.duration_bits = self.n;
         return @rem(ctx.bit, self.n) == 0;
     }
 };

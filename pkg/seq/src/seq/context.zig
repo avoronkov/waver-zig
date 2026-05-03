@@ -23,6 +23,9 @@ realBit: i64 = 0,
 time: f64 = 0,
 input: f64 = 0,
 
+// If duration bits are set by filters.
+duration_bits: ?i64 = null,
+
 pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,

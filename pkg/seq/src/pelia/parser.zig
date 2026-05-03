@@ -265,10 +265,10 @@ fn parseSignalFuncs(self: *Self, s: *Signaler) !bool {
             next = true;
         }
         break :blk if (tok == .eol or tok == .eof or tok == .vertical_bar)
-            Literal{ .number = 1 }
+            Literal{ .number = 0 }
         else
             try self.parseAtom();
-    } else Literal{ .number = 1 };
+    } else Literal{ .number = 0 };
 
     try s.add_func(signal_func.SignalFunc{
         .inst = inst,

@@ -99,6 +99,7 @@ pub fn setTempo(self: *Self, tempo: f64) void {
 fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     self.context.bit = bit;
     self.context.realBit = bit;
+    self.context.duration_bits = null;
     const signals = try s.signals(&self.context);
     if (signals) |sigs| {
         defer self.allocator.free(sigs);
@@ -108,7 +109,8 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
                 std.log.err("Instrument not found: {s}", .{sig.instrument.string()});
                 return error.NotFound;
             };
-            const durFloat: f64 = @floatFromInt(sig.duration_bits);
+            const duration_bits = if (sig.duration_bits > 0) sig.duration_bits else if (self.context.duration_bits) |db| db else 1;
+            const durFloat: f64 = @floatFromInt(duration_bits);
             const durSec: f64 = durFloat * periodFloat / 1000000;
             const w = try inst.wave(.{
                 .freq = sig.freq,
@@ -116,7 +118,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
                 .dur = durSec,
             }, null);
             if (self.log) |log| {
-                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, sig.duration_bits});
+                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, duration_bits});
                 try log.flush();
             }
             try tape.append(w);
