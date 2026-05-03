@@ -167,6 +167,7 @@ test "12-user-signalers.pelia" {
     ;
     try testExample(input, output);
 }
+
 test "13-embeded-sample.pelia" {
     const input = &[_][*:0]const u8{ "self", "../../examples/13-embeded-sample.pelia" };
     const output =
@@ -174,6 +175,18 @@ test "13-embeded-sample.pelia" {
         \\[2] 'Kick' freq=0, amp=0.75, bits=1
         \\[4] 'Kick' freq=0, amp=0.75, bits=1
         \\[6] 'Kick' freq=0, amp=0.75, bits=1
+        \\
+    ;
+    try testExample(input, output);
+}
+
+test "14-std-functions.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/14-std-functions.pelia" };
+    const output =
+        \\[0] 'sine' freq=220, amp=0.75, bits=1
+        \\[2] 'sine' freq=261.6255653005882, amp=0.75, bits=1
+        \\[4] 'sine' freq=329.62755691286264, amp=0.75, bits=1
+        \\[6] 'sine' freq=220, amp=0.75, bits=1
         \\
     ;
     try testExample(input, output);

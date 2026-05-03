@@ -74,10 +74,7 @@ allocator: Allocator,
 io: std.Io,
 lexer: Lexer,
 mtime: ?std.Io.Timestamp,
-definedVars: std.BufSet,
-definedFuncs: std.BufSet,
-definedSignalers: std.BufSet,
-seqCounters: i64 = 0,
+prog: *Program,
 
 pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
     const clock = std.Io.Clock.real;
@@ -89,13 +86,13 @@ pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
     var file_buffer: [1024]u8 = undefined;
     var file_reader = file.reader(io, &file_buffer);
 
-    var parser = try init(a, io, &file_reader.interface, stat.mtime);
-    defer parser.deinit();
-
     var prog = Program.init(a);
     errdefer prog.deinit();
 
-    try parser.parse(&prog);
+    var parser = try init(a, io, &file_reader.interface, &prog, stat.mtime);
+    defer parser.deinit();
+
+    try parser.parse();
 
     const dur = start.untilNow(io, clock);
     std.log.info("parse_file took {}ms\n", .{dur.toMicroseconds()});
@@ -103,7 +100,7 @@ pub fn parseFile(a: Allocator, io: std.Io, filename: []const u8) !Program {
     return prog;
 }
 
-pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Timestamp) !Self {
+pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, prog: *Program, mtime: ?std.Io.Timestamp) !Self {
     const lexer = try Lexer.init(a, reader);
 
     return .{
@@ -111,20 +108,15 @@ pub fn init(a: Allocator, io: std.Io, reader: *std.Io.Reader, mtime: ?std.Io.Tim
         .io = io,
         .lexer = lexer,
         .mtime = mtime,
-        .definedVars = std.BufSet.init(a),
-        .definedFuncs = std.BufSet.init(a),
-        .definedSignalers = std.BufSet.init(a),
+        .prog = prog,
     };
 }
 
 pub fn deinit(self: *Self) void {
     self.lexer.deinit();
-    self.definedVars.deinit();
-    self.definedFuncs.deinit();
-    self.definedSignalers.deinit();
 }
 
-fn parseInner(self: *Self, prog: *Program) !void {
+fn parseInner(self: *Self) !void {
     LOOP: while (true) {
         if (self.lexer.top()) |tok| {
             if (tok == Lexer.Token.eof) {
@@ -132,9 +124,9 @@ fn parseInner(self: *Self, prog: *Program) !void {
             }
 
             switch (try self.nextStatementType()) {
-                .pragma => try self.parsePragma(prog),
-                .regular => try self.parseRegularSt(prog),
-                .assignment => try self.parseAssignment(prog),
+                .pragma => try self.parsePragma(),
+                .regular => try self.parseRegularSt(),
+                .assignment => try self.parseAssignment(),
                 .eof => break :LOOP,
             }
         } else {
@@ -143,25 +135,24 @@ fn parseInner(self: *Self, prog: *Program) !void {
     }
 }
 
-pub fn parse(self: *Self, prog: *Program) !void {
-    try self.parseInner(prog);
-
+pub fn parse(self: *Self) !void {
     for (edo12.notes.keys()) |key| {
         const value = edo12.notes.get(key) orelse std.debug.panic("Edo12 key not found: {s}\n", .{key});
-        try prog.variables.put(self.allocator, try self.allocator.dupe(u8, key), Literal{ .number = value });
+        try self.prog.variables.put(self.allocator, try self.allocator.dupe(u8, key), Literal{ .number = value });
     }
 
     // Parse edo12 scale functions
-    // std.debug.print("edo12: {s}\n", .{edo12.code});
-    // var reader = std.Io.Reader.fixed(edo12.code);
-    // var parser = try init(self.allocator, self.io, &reader, null);
-    // defer parser.deinit();
+    var reader = std.Io.Reader.fixed(edo12.code);
+    var parser = try init(self.allocator, self.io, &reader, self.prog, null);
+    defer parser.deinit();
+    try parser.parseInner();
 
-    // try parser.parseInner(prog);
+    // Parse the program itself
+    try self.parseInner();
 
-    prog.seqCounters = self.seqCounters;
-    prog.scaleFrequencies = &edo12.frequencies;
-    prog.mtime = self.mtime;
+    // prog.seqCounters = self.seqCounters;
+    self.prog.scaleFrequencies = &edo12.frequencies;
+    self.prog.mtime = self.mtime;
 }
 
 fn nextStatementType(self: *Self) !StatementType {
@@ -191,13 +182,13 @@ fn isIdentKnown(self: *const Self, ident: []const u8) bool {
     if (waveform.waveforms.has(ident)) {
         return true;
     }
-    if (self.definedVars.contains(ident)) {
+    if (self.prog.instruments.contains(ident)) {
         return true;
     }
-    if (self.definedFuncs.contains(ident)) {
+    if (self.prog.functions.contains(ident)) {
         return true;
     }
-    if (self.definedSignalers.contains(ident)) {
+    if (self.prog.user_signalers.contains(ident)) {
         return true;
     }
     return false;
@@ -205,19 +196,18 @@ fn isIdentKnown(self: *const Self, ident: []const u8) bool {
 
 fn parseSignaler(
     self: *Self,
-    prog: *Program,
 ) !Signaler {
     var s = Signaler.init(self.allocator);
     errdefer s.deinit();
 
     try self.parseSignalFilters(&s);
 
-    try self.checkWaveformUsed(prog);
+    try self.checkWaveformUsed(self.prog);
 
     if (self.lexer.top()) |tk| {
         switch (tk) {
             .ident => |id| {
-                if (self.definedSignalers.contains(id)) {
+                if (self.prog.user_signalers.contains(id)) {
                     self.lexer.drop();
                     try s.add_signaler(id);
                     // TODO copypaste
@@ -337,7 +327,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
         }
         return switch (tok) {
             .ident => |i| blk: {
-                if (self.definedFuncs.contains(i)) {
+                if (self.prog.functions.contains(i)) {
                     const arg = try self.parseAtom();
                     var list = try self.allocator.alloc(Literal, 3);
                     errdefer self.allocator.free(list);
@@ -449,7 +439,7 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
     }
 }
 
-fn parsePragma(self: *Self, prog: *Program) !void {
+fn parsePragma(self: *Self) !void {
     // Drop % (%% not supported)
     self.lexer.drop();
     const pragma = if (self.lexer.pop()) |tok| blk: {
@@ -467,7 +457,7 @@ fn parsePragma(self: *Self, prog: *Program) !void {
                 else => return error.unexpectedToken,
             };
         } else return error.unexpectedEof;
-        prog.tempo = tempo;
+        self.prog.tempo = tempo;
     }
     else if (std.mem.eql(u8, pragma, "stop")) {
         const stop: i64 = if (self.lexer.pop()) |tok| blk: {
@@ -476,7 +466,7 @@ fn parsePragma(self: *Self, prog: *Program) !void {
                 else => return error.unexpectedToken,
             };
         } else return error.unexpectedEof;
-        prog.stop = stop;
+        self.prog.stop = stop;
     } else {
         std.log.err("Unknown pragma: {s}", .{pragma});
         return error.unknownPragma;
@@ -491,10 +481,9 @@ fn parsePragma(self: *Self, prog: *Program) !void {
 
 fn parseRegularSt(
     self: *Self,
-    prog: *Program,
 ) !void {
-    const signaler = try self.parseSignaler(prog);
-    try prog.signalers.append(self.allocator, signaler);
+    const signaler = try self.parseSignaler();
+    try self.prog.signalers.append(self.allocator, signaler);
 }
 
 // var = <value>
@@ -502,7 +491,6 @@ fn parseRegularSt(
 // sig == <signals>
 fn parseAssignment(
     self: *Self,
-    prog: *Program,
 ) !void {
     const name = if (self.lexer.pop()) |tok| blk: {
         break :blk switch (tok) {
@@ -514,10 +502,10 @@ fn parseAssignment(
     const t2 = self.lexer.pop() orelse return error.unexpectedEof;
     switch (t2) {
         .ident => |argname| {
-            return self.parseFunctionAssignment(prog, name, argname);
+            return self.parseFunctionAssignment(name, argname);
         },
         .double_assign => {
-            return self.parseSignalerAssignment(prog, name);
+            return self.parseSignalerAssignment(name);
         },
         else => {},
     }
@@ -534,12 +522,11 @@ fn parseAssignment(
                 const wi = wave_input.WaveInput{ .waveform = wf };
                 var inst = Instrument.init(self.allocator, wi);
                 try self.parseInstrumentFilters(&inst);
-                try prog.instruments.put(
-                    self.allocator,
-                    try prog.allocator.dupe(u8, name),
+                try self.prog.instruments.put(
+                    self.prog.allocator,
+                    try self.prog.allocator.dupe(u8, name),
                     inst,
                 );
-                try self.definedVars.insert(name);
                 return;
             }
         },
@@ -550,12 +537,11 @@ fn parseAssignment(
             const wi = wave_input.WaveInput{ .sample = smp };
             var inst = Instrument.init(self.allocator, wi);
             try self.parseInstrumentFilters(&inst);
-            try prog.instruments.put(
-                self.allocator,
-                try prog.allocator.dupe(u8, name),
+            try self.prog.instruments.put(
+                self.prog.allocator,
+                try self.prog.allocator.dupe(u8, name),
                 inst,
             );
-            try self.definedVars.insert(name);
             return;
         },
         else => {},
@@ -564,11 +550,11 @@ fn parseAssignment(
     // variable assignment
     const atom = try self.parseAtom();
     const key = try self.allocator.dupe(u8, name);
-    try prog.variables.put(self.allocator, key, atom);
+    try self.prog.variables.put(self.allocator, key, atom);
 }
 
 // func arg = <body>
-fn parseFunctionAssignment(self: *Self, prog: *Program, name: []const u8, argname: []const u8) !void {
+fn parseFunctionAssignment(self: *Self, name: []const u8, argname: []const u8) !void {
     const t3 = self.lexer.pop() orelse return error.unexpectedEof;
     if (t3 != .assign) {
         return error.unexpectedToken;
@@ -576,15 +562,13 @@ fn parseFunctionAssignment(self: *Self, prog: *Program, name: []const u8, argnam
     const raw = try self.parseAtom();
     defer literal.freeLiteral(self.allocator, raw);
     const body = try literal.substitute(self.allocator, raw, .{ .ident = try primitives.Ident.init(argname) }, .arg);
-    try prog.functions.put(prog.allocator, try prog.allocator.dupe(u8, name), body);
-    try self.definedFuncs.insert(name);
+    try self.prog.functions.put(self.prog.allocator, try self.prog.allocator.dupe(u8, name), body);
 }
 
 // sig = <signaler>
-fn parseSignalerAssignment(self: *Self, prog: *Program, name: []const u8) !void {
-    const signaler = try self.parseSignaler(prog);
-    try prog.user_signalers.put(prog.allocator, try prog.allocator.dupe(u8, name), signaler);
-    try self.definedSignalers.insert(name);
+fn parseSignalerAssignment(self: *Self, name: []const u8) !void {
+    const signaler = try self.parseSignaler();
+    try self.prog.user_signalers.put(self.prog.allocator, try self.prog.allocator.dupe(u8, name), signaler);
 }
 
 fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
@@ -705,10 +689,10 @@ fn parseSeq(self: *Self) ParseError!Literal {
 
     var literals = try self.allocator.alloc(Literal, 3);
     literals[0] = .seq;
-    literals[1] = .{ .number = self.seqCounters };
+    literals[1] = .{ .number = self.prog.seqCounters };
     literals[2] = arg;
 
-    self.seqCounters += 1;
+    self.prog.seqCounters += 1;
 
     return Literal{
         .list = literals,
@@ -759,12 +743,13 @@ test "pragma tempo" {
         \\
     ;
     var reader = std.Io.Reader.fixed(input);
-    var parser = try init(allocator, io, &reader, null);
-    defer parser.deinit();
     var prog = Program.init(allocator);
     defer prog.deinit();
 
-    try parser.parse(&prog);
+    var parser = try init(allocator, io, &reader, &prog, null);
+    defer parser.deinit();
+
+    try parser.parse();
 
     try std.testing.expectEqual(prog.tempo, 144);
 }
@@ -778,12 +763,13 @@ test "pragma stop" {
         \\
     ;
     var reader = std.Io.Reader.fixed(input);
-    var parser = try init(allocator, io, &reader, null);
-    defer parser.deinit();
     var prog = Program.init(allocator);
     defer prog.deinit();
 
-    try parser.parse(&prog);
+    var parser = try init(allocator, io, &reader, &prog, null);
+    defer parser.deinit();
+
+    try parser.parse();
 
     try std.testing.expectEqual(prog.stop, 82);
 }
