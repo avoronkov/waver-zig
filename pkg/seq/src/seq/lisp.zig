@@ -91,7 +91,7 @@ fn evalFunc(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value 
     const argLiteral = try valueToLiteral(a, arg);
 
     const body = try literal.substitute(a, funcBody, .arg, argLiteral);
-    defer literal.freeLiteral(a, body);
+    defer body.deinit(a);
     return try eval(a, ctx, body);
 }
 

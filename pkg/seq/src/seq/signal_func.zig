@@ -104,9 +104,9 @@ pub const SignalFunc = struct {
     }
 
     pub fn deinit(self: *SignalFunc, allocator: Allocator) void {
-        literal.freeLiteral(allocator, self.inst);
-        literal.freeLiteral(allocator, self.freq);
-        literal.freeLiteral(allocator, self.amplitude);
-        literal.freeLiteral(allocator, self.duration_bits);
+        self.inst.deinit(allocator);
+        self.freq.deinit(allocator);
+        self.amplitude.deinit(allocator);
+        self.duration_bits.deinit(allocator);
     }
 };

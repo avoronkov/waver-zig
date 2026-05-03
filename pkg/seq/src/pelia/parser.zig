@@ -353,7 +353,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
                 } else return error.unexpectedEof;
             },
             else => {
-                std.log.err("Unexpected token while parsing atom: {any}\n", .{tok});
+                std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{tok, self.lexer.current});
                 return error.unexpectedToken;
             },
         };
@@ -364,7 +364,7 @@ fn parseCommaSeparatedList(self: *Self, first: Literal) ParseError!Literal {
     var list: ArrayList(Literal) = .empty;
     errdefer {
         for (list.items) |item| {
-            literal.freeLiteral(self.allocator, item);
+            item.deinit(self.allocator);
         }
         list.deinit(self.allocator);
     }
@@ -391,7 +391,7 @@ fn parseBracketsList(self: *Self) ParseError!Literal {
     var list: ArrayList(Literal) = .empty;
     errdefer {
         for (list.items) |item| {
-            literal.freeLiteral(self.allocator, item);
+            item.deinit(self.allocator);
         }
         list.deinit(self.allocator);
     }
@@ -575,7 +575,7 @@ fn parseFunctionAssignment(self: *Self, name: []const u8, argname: []const u8) !
         return error.unexpectedToken;
     }
     const raw = try self.parseAtom();
-    defer literal.freeLiteral(self.allocator, raw);
+    defer raw.deinit(self.allocator);
     const body = try literal.substitute(self.allocator, raw, .{ .ident = try primitives.Ident.init(argname) }, .arg);
     try self.prog.functions.put(self.prog.allocator, try self.prog.allocator.dupe(u8, name), body);
 }
@@ -683,12 +683,33 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
     // drop ":"
     self.lexer.drop();
 
-    if (self.lexer.pop()) |arg| {
-        switch (arg) {
-            .number => |n| return signal_filter.SignalFilter{ .every = signal_filter.Every{ .n = n } },
-            else => return error.unexpectedToken,
-        }
-    } else return error.unexpectedEof;
+    const lit = try self.parseAtom();
+    defer lit.deinit(self.allocator);
+    switch (lit) {
+        .number => |n| return signal_filter.SignalFilter{ .every = signal_filter.Every{ .n = n } },
+        .list => |lst| {
+            var res = try self.allocator.alloc(i64, lst.len);
+            errdefer self.allocator.free(res);
+            for (lst, 0..) |it, i| {
+                switch (it) {
+                    .number => |n| {
+                        res[i] = n;
+                    },
+                    else => {
+                        std.log.err("Bad argument for everyList(:) function: {any}", .{it});
+                        return error.unexpectedToken;
+                    }
+                }
+            }
+            return signal_filter.SignalFilter{
+                .everyList = signal_filter.EveryList{ .allocator = self.allocator, .args = res },
+            };
+        },
+        else => {
+            std.log.err("Bad argument for every(:) function: {any}", .{lit});
+            return error.unexpectedToken;
+        },
+    }
 }
 
 fn parseBitShift(self: *Self) ParseError!signal_filter.SignalFilter {

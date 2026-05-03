@@ -17,19 +17,19 @@ pub const Literal = union(enum) {
     multiply,
     sin,
     pow,
-};
 
-pub fn freeLiteral(a: Allocator, l: Literal) void {
-    switch (l) {
-        .list => |lst| {
-            for (lst) |it| {
-                freeLiteral(a, it);
-            }
-            a.free(lst);
-        },
-        else => return,
+    pub fn deinit(self: *const Literal, a: Allocator) void {
+        switch (self.*) {
+            .list => |*lst| {
+                for (lst.*) |it| {
+                    it.deinit(a);
+                }
+                a.free(lst.*);
+            },
+            else => return,
+        }
     }
-}
+};
 
 pub fn copyLiteral(a: Allocator, l: Literal) !Literal {
     return switch (l) {

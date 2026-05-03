@@ -97,7 +97,7 @@ pub const LispCode = struct {
     }
 
     pub fn deinit(self: *LispCode) void {
-        literal.freeLiteral(self.allocator, self.code);
+        self.code.deinit(self.allocator);
     }
 
     pub fn copy(self: *const LispCode, a: Allocator) !LispCode {

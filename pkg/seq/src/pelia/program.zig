@@ -5,7 +5,6 @@ const Instrument = @import("../instrument.zig");
 
 const Allocator = std.mem.Allocator;
 const Literal = literal.Literal;
-const freeLiteral = literal.freeLiteral;
 
 const Self = @This();
 
@@ -46,7 +45,7 @@ pub fn deinit(self: *Self) void {
     var varIter = self.variables.iterator();
     while (varIter.next()) |pair| {
         self.allocator.free(pair.key_ptr.*);
-        freeLiteral(self.allocator, pair.value_ptr.*);
+        pair.value_ptr.deinit(self.allocator);
     }
     self.variables.deinit(self.allocator);
 
@@ -54,7 +53,7 @@ pub fn deinit(self: *Self) void {
     var funcIter = self.functions.iterator();
     while (funcIter.next()) |pair| {
         self.allocator.free(pair.key_ptr.*);
-        freeLiteral(self.allocator, pair.value_ptr.*);
+        pair.value_ptr.deinit(self.allocator);
     }
     self.functions.deinit(self.allocator);
 

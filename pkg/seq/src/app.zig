@@ -192,6 +192,21 @@ test "14-std-functions.pelia" {
     try testExample(input, output);
 }
 
+test "15-every-list.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/15-every-list.pelia" };
+    const output =
+        \\[0] 'sine' freq=220, amp=0.75, bits=1
+        \\[2] 'sine' freq=261.6255653005882, amp=0.75, bits=1
+        \\[5] 'sine' freq=329.62755691286264, amp=0.75, bits=1
+        \\[8] 'sine' freq=220, amp=0.75, bits=1
+        \\[10] 'sine' freq=261.6255653005882, amp=0.75, bits=1
+        \\[13] 'sine' freq=329.62755691286264, amp=0.75, bits=1
+        \\
+    ;
+    try testExample(input, output);
+}
+
+
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;
     const clock = std.Io.Clock.real;

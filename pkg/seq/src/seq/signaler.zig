@@ -33,6 +33,9 @@ pub fn init(a: Allocator) Self {
 }
 
 pub fn deinit(self: *Self) void {
+    for (self.signal_filters.items) |*sf| {
+        sf.deinit();
+    }
     self.signal_filters.deinit(self.allocator);
 
     for (self.signal_funcs.items) |*f| {
