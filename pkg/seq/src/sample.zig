@@ -39,7 +39,10 @@ pub const Sample = struct {
 pub fn parseSampleFile(a: Allocator, io: std.Io, filename: []const u8) !Sample {
     return parseFsFile(a, io, filename) catch |err| {
         if (err == error.FileNotFound) {
-            return parseEmbededFile(a, filename);
+            return parseEmbededFile(a, filename) catch |err2| {
+                std.log.err("Cannot open file {s}: {t}", .{filename, err2});
+                return err2;
+            };
         }
         return err;
     };

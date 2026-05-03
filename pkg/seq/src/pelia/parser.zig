@@ -467,6 +467,19 @@ fn parsePragma(self: *Self) !void {
             };
         } else return error.unexpectedEof;
         self.prog.stop = stop;
+    }
+    else if (std.mem.eql(u8, pragma, "scale")) {
+        const scale_name: []const u8 = if (self.lexer.pop()) |tok| blk: {
+            break :blk switch (tok) {
+                .ident => |s| s,
+                else => return error.unexpectedToken,
+            };
+        } else return error.unexpectedEof;
+        if (!std.mem.eql(u8, scale_name, "edo12")) {
+            std.log.err("Unknown scale: {s}", .{scale_name});
+            return error.unknownScale;
+        }
+        // TODO: proper edo12 and edo19 support
     } else {
         std.log.err("Unknown pragma: {s}", .{pragma});
         return error.unknownPragma;
@@ -521,6 +534,7 @@ fn parseAssignment(
                 self.lexer.drop();
                 const wi = wave_input.WaveInput{ .waveform = wf };
                 var inst = Instrument.init(self.allocator, wi);
+                errdefer inst.deinit();
                 try self.parseInstrumentFilters(&inst);
                 try self.prog.instruments.put(
                     self.prog.allocator,
@@ -536,6 +550,7 @@ fn parseAssignment(
             errdefer smp.deinit();
             const wi = wave_input.WaveInput{ .sample = smp };
             var inst = Instrument.init(self.allocator, wi);
+            errdefer inst.deinit();
             try self.parseInstrumentFilters(&inst);
             try self.prog.instruments.put(
                 self.prog.allocator,
@@ -634,8 +649,20 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         try switch (value1) {
             .number => |n| setFilterParam(flt, name, n),
             .float => |f| setFilterParam(flt, name, f),
+            .ident => |i| 
+                if (std.mem.eql(u8, i, "true"))
+                    setFilterParam(flt, name, true)
+                else if (std.mem.eql(u8, i, "true"))
+                    setFilterParam(flt, name, false)
+                else {
+                    std.log.err("Unexpected identifier: {s}", .{i});
+                    return error.unexpectedToken;
+                },
             // TODO handle [-] (negative values).
-            else => return error.unexpectedToken,
+            else => {
+                std.log.err("Unexpected token: {any}", .{value1});
+                return error.unexpectedToken;
+            },
         };
     }
 }
@@ -644,6 +671,9 @@ fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
     try switch (flt.*) {
         .am => |*v| setStructField(v, key, value),
         .exp => |*v| setStructField(v, key, value),
+        .pan => |*v| setStructField(v, key, value),
+        .flanger => |*v| setStructField(v, key, value),
+        .adsr => |*v| setStructField(v, key, value),
         .code => {},
     };
 }

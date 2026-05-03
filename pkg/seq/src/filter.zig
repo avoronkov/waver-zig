@@ -160,9 +160,52 @@ test "LispCode benchmark" {
     std.debug.print("Exp benchmark [lisp]: {}ns per op\n", .{ns});
 }
 
+pub const Pan = struct {
+    l: f64,
+    r: f64,
+
+    pub fn apply(self: Pan, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        const mp = if (note.channel == 0) self.l else self.r;
+        const v = try chain.value_of(n - 1, t, note);
+        return v * mp;
+    }
+};
+
+pub const Flanger = struct {
+    freq: f64,
+    maxShift: f64,
+    abs: bool,
+
+    pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        _ = self;
+        // TODO
+        const v = try chain.value_of(n - 1, t, note);
+        return v;
+    }
+};
+
+pub const Adsr = struct {
+    attackLevel: f64,
+    decayLevel: f64,
+    attackLen: f64,
+    decayLen: f64,
+    sustainLen: f64,
+    releaseLen: f64,
+
+    pub fn apply(self: Adsr, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        _ = self;
+        // TODO
+        const v = try chain.value_of(n - 1, t, note);
+        return v;
+    }
+};
+
 pub const Filter = union(enum) {
     am: Am,
     exp: Exp,
+    pan: Pan,
+    flanger: Flanger,
+    adsr: Adsr,
     code: LispCode,
 };
 
@@ -170,6 +213,9 @@ pub fn filter_apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofErro
     return switch (f) {
         .am => |v| v.apply(chain, n, t, note),
         .exp => |v| v.apply(chain, n, t, note),
+        .pan => |v| v.apply(chain, n, t, note),
+        .flanger => |v| v.apply(chain, n, t, note),
+        .adsr => |v| v.apply(chain, n, t, note),
         .code => |v| v.apply(chain, n, t, note),
     };
 }
@@ -178,6 +224,9 @@ pub fn free_filter(f: *Filter) void {
     switch (f.*) {
         .am => {},
         .exp => {},
+        .pan => {},
+        .flanger => {},
+        .adsr => {},
         .code => |*c| c.deinit(),
     }
 }
@@ -186,10 +235,24 @@ pub fn copy_filter(a: Allocator, f: Filter) !Filter {
     return switch (f) {
         .am => |v| .{ .am = v },
         .exp => |v| .{ .exp = v },
+        .pan => |v| .{ .pan = v },
+        .flanger => |v| .{ .flanger = v },
+        .adsr => |v| .{ .adsr = v },
         .code => |v| .{ .code = try v.copy(a) },
     };
 }
 
 pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.{
     .{ "am", Filter{ .am = Am{ .freq = 16, .amp = 1 } } },
+    .{ "exp", Filter{ .exp = Exp{ .value = 1 } } },
+    .{ "pan", Filter{ .pan = Pan{ .l = 1, .r = 1 } } },
+    .{ "flanger", Filter{ .flanger = Flanger{ .maxShift = 0.02, .freq = 4.0, .abs = false } } },
+    .{ "adsr", Filter{ .adsr = Adsr{
+        .attackLevel = 1,
+        .decayLevel = 1,
+        .attackLen = 0,
+        .decayLen = 0,
+        .sustainLen = 0,
+        .releaseLen = 1,
+    } } },
 });
