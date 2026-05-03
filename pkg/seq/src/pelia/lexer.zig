@@ -34,6 +34,17 @@ pub const Token = union(enum) {
     double_percent,
     string: []const u8,
     comment: []const u8,
+
+    pub fn eql(a: Token, b: Token) bool {
+        return (std.meta.activeTag(a) == std.meta.activeTag(b)) and switch (a) {
+            .ident => |tokId| std.mem.eql(u8, tokId, b.ident),
+            .string => |s| std.mem.eql(u8, s, b.string),
+            .comment => |s| std.mem.eql(u8, s, b.comment),
+            .number => |n| n == b.number,
+            .float => |f| f == b.float,
+            else => true,
+        };
+    }
 };
 
 const expect = std.testing.expect;
@@ -199,25 +210,27 @@ test "parse_tokens" {
         std.testing.allocator.free(tokens);
     }
 
-    std.debug.print("parsed tokens: {any}\n", .{tokens});
-    try expect(tokens.len == 6);
+    try expect(tokensEql(tokens, &[_]Token{ .plus, .minus, .arrow_right, .colon, .{ .ident = "hello" }, .eof }));
 }
 
 test "parse_tokens numbers" {
     const tokens = try parse_tokens(std.testing.allocator, "1 23 4567 23.45 12.0 4..8");
-    defer std.testing.allocator.free(tokens);
+    defer {
+        free_tokens(std.testing.allocator, tokens);
+        std.testing.allocator.free(tokens);
+    }
 
-    std.debug.print("parsed tokens: {any}\n", .{tokens});
-    try expectEqual(9, tokens.len);
-    try expect(tokens[0].number == 1);
-    try expect(tokens[1].number == 23);
-    try expect(tokens[2].number == 4567);
-    try expect(tokens[3].float == 23.45);
-    try expect(tokens[4].float == 12.0);
-    try expect(tokens[5].number == 4);
-    try expect(tokens[6] == .double_dot);
-    try expect(tokens[7].number == 8);
-    try expect(tokens[8] == Token.eof);
+    try expect(tokensEql(tokens, &[_]Token{
+        .{ .number = 1 },
+        .{ .number = 23 },
+        .{ .number = 4567 },
+        .{ .float = 23.45 },
+        .{ .float = 12.0 },
+        .{ .number = 4 },
+        .double_dot,
+        .{ .number = 8 },
+        .eof,
+    }));
 }
 
 test "parse_comments" {
@@ -227,13 +240,13 @@ test "parse_comments" {
         std.testing.allocator.free(tokens);
     }
 
-    std.debug.print("parsed tokens: {any}\n", .{tokens});
-    try expectEqual(5, tokens.len);
-    try expectEqualStrings("foo", tokens[0].ident);
-    try expectEqual(.eol, tokens[1]);
-    try expectEqualStrings("bar", tokens[2].ident);
-    try expectEqual(.eol, tokens[3]);
-    try expectEqual(.eof, tokens[4]);
+    try expect(tokensEql(tokens, &[_]Token{
+        .{ .ident = "foo" },
+        .eol,
+        .{ .ident = "bar" },
+        .eol,
+        .eof,
+    }));
 }
 
 test "parse_strings" {
@@ -243,12 +256,12 @@ test "parse_strings" {
         std.testing.allocator.free(tokens);
     }
 
-    std.debug.print("parsed tokens: {any}\n", .{tokens});
-    try expectEqual(4, tokens.len);
-    try expectEqualStrings("foo", tokens[0].ident);
-    try expectEqual(.assign, tokens[1]);
-    try expectEqualStrings("bar-baz", tokens[2].string);
-    try expectEqual(.eof, tokens[3]);
+    try expect(tokensEql(tokens, &[_]Token{
+        .{ .ident = "foo" },
+        .assign,
+        .{ .string = "bar-baz" },
+        .eof,
+    }));
 }
 
 fn skip_whitespaces(content: []const u8, i: usize) usize {
@@ -264,6 +277,20 @@ fn has_prefix(str: []const u8, prefix: []const u8) bool {
         return false;
     }
     return std.mem.eql(u8, str[0..prefix.len], prefix);
+}
+
+fn tokensEql(a: []const Token, b: []const Token) bool {
+    if (a.len != b.len) {
+        std.debug.print("Tokens lists have different length ({} != {}): {any} != {any}", .{a.len, b.len, a, b});
+        return false;
+    }
+    for (a, 0..) |it, idx| {
+        if (!it.eql(b[idx])) {
+            std.debug.print("Tokens lists are different at index {}: {any} != {any}", .{idx, a, b});
+            return false;
+        }
+    }
+    return true;
 }
 
 test "has_prefix" {

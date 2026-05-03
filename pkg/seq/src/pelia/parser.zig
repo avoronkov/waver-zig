@@ -343,7 +343,7 @@ const ParseError = error{
 fn parseAtom(self: *Self) ParseError!Literal {
     const first = try self.parseSingleAtom();
     if (self.lexer.top()) |tok| {
-        if (tokensEql(tok, .comma)) {
+        if (tok.eql(.comma)) {
             self.lexer.drop();
             return self.parseCommaSeparatedList(first);
         }
@@ -787,7 +787,7 @@ fn parseSeq(self: *Self) ParseError!Literal {
 
 fn findSignalFilterParser(tok: Lexer.Token) ?SignalFilterParser {
     for (signalFilterParsers) |item| {
-        if (tokensEql(item.token, tok)) {
+        if (item.token.eql(tok)) {
             return item.parse;
         }
     }
@@ -796,7 +796,7 @@ fn findSignalFilterParser(tok: Lexer.Token) ?SignalFilterParser {
 
 fn findFuncParser(tok: Lexer.Token) ?FuncParser {
     for (funcParsers) |item| {
-        if (tokensEql(item.token, tok)) {
+        if (item.token.eql(tok)) {
             return item.parse;
         }
     }
@@ -805,19 +805,11 @@ fn findFuncParser(tok: Lexer.Token) ?FuncParser {
 
 fn findAtom(tok: Lexer.Token) ?Literal {
     for (atoms) |at| {
-        if (tokensEql(at.token, tok)) {
+        if (at.token.eql(tok)) {
             return at.atom;
         }
     }
     return null;
-}
-
-fn tokensEql(a: Lexer.Token, b: Lexer.Token) bool {
-    return (std.meta.activeTag(a) == std.meta.activeTag(b)) and switch (a) {
-        .ident => |tokId| std.mem.eql(u8, tokId, b.ident),
-        .string => |s| std.mem.eql(u8, s, b.string),
-        else => true,
-    };
 }
 
 test "pragma tempo" {

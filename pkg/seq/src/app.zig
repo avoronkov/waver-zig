@@ -218,7 +218,6 @@ test "16-multiple-signal-funcations.pelia" {
     try testExample(input, output);
 }
 
-
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;
     const clock = std.Io.Clock.real;
@@ -232,7 +231,6 @@ fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     var app = try Self.init(allocator, io, clock, pargs, &stream);
     defer app.deinit();
 
-    std.debug.print(">>> Testing {s}\n", .{app.args.input});
     var t = try app.run();
     t.join();
 
