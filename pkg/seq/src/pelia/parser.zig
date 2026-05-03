@@ -457,7 +457,7 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
                 if (waveform.waveforms.get(id)) |wf| {
                     const wi = wave_input.WaveInput{ .waveform = wf };
                     const inst = Instrument.init(self.allocator, wi);
-                    if (prog.instruments.get(id)) |_| {
+                    if (prog.instruments.contains(id)) {
                         // Instrument already exists.
                         return;
                     }
