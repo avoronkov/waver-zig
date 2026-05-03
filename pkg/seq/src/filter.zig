@@ -207,40 +207,40 @@ pub const Filter = union(enum) {
     flanger: Flanger,
     adsr: Adsr,
     code: LispCode,
-};
 
-pub fn filter_apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-    return switch (f) {
-        .am => |v| v.apply(chain, n, t, note),
-        .exp => |v| v.apply(chain, n, t, note),
-        .pan => |v| v.apply(chain, n, t, note),
-        .flanger => |v| v.apply(chain, n, t, note),
-        .adsr => |v| v.apply(chain, n, t, note),
-        .code => |v| v.apply(chain, n, t, note),
-    };
-}
-
-pub fn free_filter(f: *Filter) void {
-    switch (f.*) {
-        .am => {},
-        .exp => {},
-        .pan => {},
-        .flanger => {},
-        .adsr => {},
-        .code => |*c| c.deinit(),
+    pub fn deinit(f: *Filter) void {
+        switch (f.*) {
+            .am => {},
+            .exp => {},
+            .pan => {},
+            .flanger => {},
+            .adsr => {},
+            .code => |*c| c.deinit(),
+        }
     }
-}
 
-pub fn copy_filter(a: Allocator, f: Filter) !Filter {
-    return switch (f) {
-        .am => |v| .{ .am = v },
-        .exp => |v| .{ .exp = v },
-        .pan => |v| .{ .pan = v },
-        .flanger => |v| .{ .flanger = v },
-        .adsr => |v| .{ .adsr = v },
-        .code => |v| .{ .code = try v.copy(a) },
-    };
-}
+    pub fn copy(f: Filter, a: Allocator) !Filter {
+        return switch (f) {
+            .am => |v| .{ .am = v },
+            .exp => |v| .{ .exp = v },
+            .pan => |v| .{ .pan = v },
+            .flanger => |v| .{ .flanger = v },
+            .adsr => |v| .{ .adsr = v },
+            .code => |v| .{ .code = try v.copy(a) },
+        };
+    }
+
+    pub fn apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        return switch (f) {
+            .am => |v| v.apply(chain, n, t, note),
+            .exp => |v| v.apply(chain, n, t, note),
+            .pan => |v| v.apply(chain, n, t, note),
+            .flanger => |v| v.apply(chain, n, t, note),
+            .adsr => |v| v.apply(chain, n, t, note),
+            .code => |v| v.apply(chain, n, t, note),
+        };
+    }
+};
 
 pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.{
     .{ "am", Filter{ .am = Am{ .freq = 16, .amp = 1 } } },

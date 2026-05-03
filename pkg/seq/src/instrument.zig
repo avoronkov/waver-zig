@@ -26,7 +26,7 @@ pub fn init(a: Allocator, w: WaveInput) Self {
 
 pub fn deinit(self: *Self) void {
     for (self.filters.items) |*f| {
-        filter.free_filter(f);
+        f.deinit();
     }
     self.filters.deinit(self.allocator);
 
@@ -40,7 +40,7 @@ pub fn deinit(self: *Self) void {
 pub fn copy(self: *const Self) !Self {
     var filters: Filters = .empty;
     for (self.filters.items) |fl| {
-        const new_fl = try filter.copy_filter(self.allocator, fl);
+        const new_fl = try fl.copy(self.allocator);
         try filters.append(self.allocator, new_fl);
     }
     return .{
@@ -67,7 +67,7 @@ pub fn value_of(self: *const Self, n: i32, t: f64, note: Note) EofError!f64 {
     // TODO get rid of cyclic init
     const c = Chain.init(self);
     const i: usize = @intCast(n);
-    return filter.filter_apply(self.filters.items[i], c, n, t, note);
+    return self.filters.items[i].apply(c, n, t, note);
 }
 
 pub fn wave(self: Self, note: Note, start: ?f64) !Wave {

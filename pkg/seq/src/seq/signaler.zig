@@ -1,6 +1,6 @@
 const std = @import("std");
 const signal = @import("./signal.zig");
-const signal_filter = @import("./signal_filter.zig");
+const SignalFilter = @import("./signal_filter.zig").SignalFilter;
 const signal_func = @import("./signal_func.zig");
 const Context = @import("./context.zig");
 
@@ -12,7 +12,7 @@ const SignalList = std.ArrayListUnmanaged(signal.Signal);
 const Self = @This();
 
 const Allocator = std.mem.Allocator;
-const SignalFilters = std.ArrayListUnmanaged(signal_filter.SignalFilter);
+const SignalFilters = std.ArrayListUnmanaged(SignalFilter);
 
 const SignalFuncLike = union(enum) {
     func: SignalFunc,
@@ -47,7 +47,7 @@ pub fn deinit(self: *Self) void {
     self.signal_funcs.deinit(self.allocator);
 }
 
-pub fn add_filter(self: *Self, f: signal_filter.SignalFilter) !void {
+pub fn add_filter(self: *Self, f: SignalFilter) !void {
     try self.signal_filters.append(self.allocator, f);
 }
 
@@ -63,7 +63,7 @@ const SignalsErrors = error{OutOfMemory,emptyList,badValue,badAmplitude,badDurat
 
 pub fn signals(self: Self, ctx: *Context) SignalsErrors!?Signals {
     for (self.signal_filters.items) |filt| {
-        if (!signal_filter.apply(filt, ctx)) {
+        if (!filt.apply(ctx)) {
             return null;
         }
     }

@@ -72,14 +72,14 @@ pub const SignalFilter = union(enum) {
             else => {},
         }
     }
-};
 
-pub fn apply(f: SignalFilter, ctx: *Context) bool {
-    return switch (f) {
-        .every => |v| v.apply(ctx),
-        .everyList => |v| v.apply(ctx),
-        .bitShift => |v| v.apply(ctx),
-        .lessThan => |v| v.apply(ctx),
-        .moreOrEqual => |v| v.apply(ctx),
-    };
-}
+    pub fn apply(f: SignalFilter, ctx: *Context) bool {
+        return switch (f) {
+            .every => |v| v.apply(ctx),
+            .everyList => |v| v.apply(ctx),
+            .bitShift => |v| v.apply(ctx),
+            .lessThan => |v| v.apply(ctx),
+            .moreOrEqual => |v| v.apply(ctx),
+        };
+    }
+};
