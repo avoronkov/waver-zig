@@ -1,0 +1,3 @@
+inst = sine
+I == inst G4
+:3 inst G3 | inst B3 0.5 | inst D4 0.25 3 | I

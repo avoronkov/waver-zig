@@ -18,11 +18,10 @@ const SignalFuncLike = union(enum) {
     func: SignalFunc,
     signaler: []const u8,
 };
-const SignalFuncs = std.ArrayListUnmanaged(SignalFuncLike);
 
 allocator: Allocator,
 signal_filters: SignalFilters,
-signal_funcs: SignalFuncs,
+signal_funcs: std.ArrayListUnmanaged(SignalFuncLike),
 
 pub fn init(a: Allocator) Self {
     return .{

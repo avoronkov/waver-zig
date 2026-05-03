@@ -206,6 +206,18 @@ test "15-every-list.pelia" {
     try testExample(input, output);
 }
 
+test "16-multiple-signal-funcations.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "3", "../../examples/16-multiple-signal-funcations.pelia" };
+    const output =
+        \\[0] 'inst' freq=195.9977179908729, amp=0.75, bits=1
+        \\[0] 'inst' freq=246.94165062806425, amp=0.5, bits=1
+        \\[0] 'inst' freq=293.6647679173985, amp=0.25, bits=3
+        \\[0] 'inst' freq=391.9954359817458, amp=0.75, bits=1
+        \\
+    ;
+    try testExample(input, output);
+}
+
 
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;

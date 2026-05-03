@@ -202,8 +202,13 @@ fn parseSignaler(
 
     try self.parseSignalFilters(&s);
 
-    try self.checkWaveformUsed(self.prog);
+    while (try self.parseSignalFuncs(&s)) {}
 
+    return s;
+}
+
+// Returns true if next signal function should be parsed.
+fn parseSignalFuncs(self: *Self, s: *Signaler) !bool {
     if (self.lexer.top()) |tk| {
         switch (tk) {
             .ident => |id| {
@@ -213,8 +218,9 @@ fn parseSignaler(
                     // TODO copypaste
                     if (self.lexer.pop()) |tok| {
                         switch (tok) {
-                            .eol => return s,
-                            .eof => return s,
+                            .eol => return false,
+                            .eof => return false,
+                            .vertical_bar => return true,
                             else => return {
                                 std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
                                 return error.unexpectedToken;
@@ -229,25 +235,53 @@ fn parseSignaler(
         }
     }
 
+    try self.checkWaveformUsed(self.prog);
+
+    var next = false;
+
     const inst = try self.parseAtom();
     const freq: Literal = if (self.lexer.top()) |tok| blk: {
-        break :blk if (tok == .eol or tok == .eof)
+        if (tok == .vertical_bar) {
+            next = true;
+        }
+        break :blk if (tok == .eol or tok == .eof or tok == .vertical_bar)
             Literal{ .float = 0 }
         else
             try self.parseAtom();
     } else Literal{ .float = 0 };
 
+    const amp: Literal = if (self.lexer.top()) |tok| blk: {
+        if (tok == .vertical_bar) {
+            next = true;
+        }
+        break :blk if (tok == .eol or tok == .eof or tok == .vertical_bar)
+            Literal{ .float = 0.75 }
+        else
+            try self.parseAtom();
+    } else Literal{ .float = 0.75 };
+
+    const dur: Literal = if (self.lexer.top()) |tok| blk: {
+        if (tok == .vertical_bar) {
+            next = true;
+        }
+        break :blk if (tok == .eol or tok == .eof or tok == .vertical_bar)
+            Literal{ .number = 1 }
+        else
+            try self.parseAtom();
+    } else Literal{ .number = 1 };
+
     try s.add_func(signal_func.SignalFunc{
         .inst = inst,
         .freq = freq,
-        .amplitude = Literal{ .float = 0.75 },
-        .duration_bits = Literal{ .number = 1 },
+        .amplitude = amp,
+        .duration_bits = dur,
     });
 
     if (self.lexer.pop()) |tok| {
         switch (tok) {
-            .eol => return s,
-            .eof => return s,
+            .eol => return false,
+            .eof => return false,
+            .vertical_bar => return true,
             else => return {
                 std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
                 return error.unexpectedToken;
@@ -352,6 +386,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
                     }
                 } else return error.unexpectedEof;
             },
+            .underscore => Literal{ .number = 0 },
             else => {
                 std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{tok, self.lexer.current});
                 return error.unexpectedToken;

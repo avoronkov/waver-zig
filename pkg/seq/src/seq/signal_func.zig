@@ -91,7 +91,10 @@ pub const SignalFunc = struct {
         defer value.free_value(a, durVal);
         const dur = switch (durVal) {
             .number => |v| v,
-            else => return error.badDuration,
+            else => {
+                std.log.err("Bad duration: {any}", .{durVal});
+                return error.badDuration;
+            },
         };
 
         const sig: Signal = .{
