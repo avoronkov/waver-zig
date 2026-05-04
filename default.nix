@@ -20,6 +20,7 @@ pkgs.stdenv.mkDerivation {
 		zig
 		zls
 		pulseaudio
+		kcov
 	];
 
 	nativeBuildInputs = with pkgs; [

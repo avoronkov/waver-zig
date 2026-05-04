@@ -87,4 +87,15 @@ pub fn build(b: *std.Build) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    const run_cover = b.addSystemCommand(&.{
+        "kcov",
+        "--clean",
+        "--include-pattern=src/",
+        b.pathJoin(&.{ b.install_path, "cover" }),
+    });
+    run_cover.addArtifactArg(mod_tests);
+
+    const cover_step = b.step("cover", "Generate test coverage report");
+    cover_step.dependOn(&run_cover.step);
 }
