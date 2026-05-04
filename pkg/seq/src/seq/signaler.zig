@@ -1,5 +1,5 @@
 const std = @import("std");
-const signal = @import("./signal.zig");
+const Signal = @import("./signal.zig");
 const SignalFilter = @import("./signal_filter.zig").SignalFilter;
 const signal_func = @import("./signal_func.zig");
 const Context = @import("./context.zig");
@@ -7,7 +7,7 @@ const Context = @import("./context.zig");
 const SignalFunc = signal_func.SignalFunc;
 const Signals = signal_func.Signals;
 
-const SignalList = std.ArrayListUnmanaged(signal.Signal);
+const SignalList = std.ArrayListUnmanaged(Signal);
 
 const Self = @This();
 

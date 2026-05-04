@@ -102,11 +102,16 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
     self.context.duration_bits = null;
     const signals = try s.signals(&self.context);
     if (signals) |sigs| {
-        defer self.allocator.free(sigs);
+        defer {
+            for (sigs) |sig| {
+                sig.deinit(self.allocator);
+            }
+            self.allocator.free(sigs);
+        }
         const periodFloat: f64 = @floatFromInt(if (self.periodMicro) |value| value.toMicroseconds() else 0);
         for (sigs) |sig| {
-            var inst = self.program.instruments.get(sig.instrument.string()) orelse {
-                std.log.err("Instrument not found: {s}", .{sig.instrument.string()});
+            var inst = self.program.instruments.get(sig.instrument) orelse {
+                std.log.err("Instrument not found: {s}", .{sig.instrument});
                 return error.NotFound;
             };
             const duration_bits = if (sig.duration_bits > 0) sig.duration_bits else if (self.context.duration_bits) |db| db else 1;
@@ -118,7 +123,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
                 .dur = durSec,
             }, null);
             if (self.log) |log| {
-                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument.string(), sig.freq, sig.amplitude, duration_bits});
+                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument, sig.freq, sig.amplitude, duration_bits});
                 try log.flush();
             }
             try tape.append(w);

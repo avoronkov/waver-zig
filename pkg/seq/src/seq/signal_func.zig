@@ -1,5 +1,5 @@
 const std = @import("std");
-const Signal = @import("./signal.zig").Signal;
+const Signal = @import("./signal.zig");
 const value = @import("./value.zig");
 const Context = @import("./context.zig");
 const primitives = @import("../pelia/primitives.zig");
@@ -98,7 +98,7 @@ pub const SignalFunc = struct {
         };
 
         const sig: Signal = .{
-            .instrument = inst,
+            .instrument = try a.dupe(u8, inst.string()),
             .freq = freq,
             .amplitude = amp,
             .duration_bits = dur,
