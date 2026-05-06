@@ -27,16 +27,16 @@ const SignalFilterParser = *const fn (self: *Self) ParseError!signal_filter.Sign
 const signalFilterParsers = [_]struct {
     token: Lexer.Token,
     parse: SignalFilterParser,
-}{
-    .{
-        .token = .colon,
-        .parse = parseEvery,
-    },
-    .{
-        .token = .plus,
-        .parse = parseBitShift,
-    },
-};
+}{ .{
+    .token = .colon,
+    .parse = parseEvery,
+}, .{
+    .token = .plus,
+    .parse = parseBitShift,
+}, .{
+    .token = .{ .ident = "eucl" },
+    .parse = parseEuclidianFirst,
+} };
 
 const FuncParser = *const fn (self: *Self) ParseError!Literal;
 
@@ -172,7 +172,14 @@ fn nextStatementType(self: *Self) !StatementType {
         return .pragma;
     }
     return switch (token) {
-        .ident => |id| if (self.isIdentKnown(id)) .regular else .assignment,
+        .ident => |id| blk: {
+            for (signalFilterParsers) |par| {
+                if (par.token.eql(token)) {
+                    break :blk .regular;
+                }
+            }
+            break :blk if (self.isIdentKnown(id)) .regular else .assignment;
+        },
         else => .regular,
     };
 }
@@ -388,7 +395,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
             },
             .underscore => Literal{ .number = 0 },
             else => {
-                std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{tok, self.lexer.current});
+                std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{ tok, self.lexer.current });
                 return error.unexpectedToken;
             },
         };
@@ -493,8 +500,7 @@ fn parsePragma(self: *Self) !void {
             };
         } else return error.unexpectedEof;
         self.prog.tempo = tempo;
-    }
-    else if (std.mem.eql(u8, pragma, "stop")) {
+    } else if (std.mem.eql(u8, pragma, "stop")) {
         const stop: i64 = if (self.lexer.pop()) |tok| blk: {
             break :blk switch (tok) {
                 .number => |n| n,
@@ -502,8 +508,7 @@ fn parsePragma(self: *Self) !void {
             };
         } else return error.unexpectedEof;
         self.prog.stop = stop;
-    }
-    else if (std.mem.eql(u8, pragma, "scale")) {
+    } else if (std.mem.eql(u8, pragma, "scale")) {
         const scale_name: []const u8 = if (self.lexer.pop()) |tok| blk: {
             break :blk switch (tok) {
                 .ident => |s| s,
@@ -684,15 +689,14 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         try switch (value1) {
             .number => |n| setFilterParam(flt, name, n),
             .float => |f| setFilterParam(flt, name, f),
-            .ident => |i| 
-                if (std.mem.eql(u8, i, "true"))
-                    setFilterParam(flt, name, true)
-                else if (std.mem.eql(u8, i, "true"))
-                    setFilterParam(flt, name, false)
-                else {
-                    std.log.err("Unexpected identifier: {s}", .{i});
-                    return error.unexpectedToken;
-                },
+            .ident => |i| if (std.mem.eql(u8, i, "true"))
+                setFilterParam(flt, name, true)
+            else if (std.mem.eql(u8, i, "true"))
+                setFilterParam(flt, name, false)
+            else {
+                std.log.err("Unexpected identifier: {s}", .{i});
+                return error.unexpectedToken;
+            },
             // TODO handle [-] (negative values).
             else => {
                 std.log.err("Unexpected token: {any}", .{value1});
@@ -733,7 +737,7 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
                     else => {
                         std.log.err("Bad argument for everyList(:) function: {any}", .{it});
                         return error.unexpectedToken;
-                    }
+                    },
                 }
             }
             return signal_filter.SignalFilter{
@@ -757,6 +761,29 @@ fn parseBitShift(self: *Self) ParseError!signal_filter.SignalFilter {
             else => return error.unexpectedToken,
         }
     } else return error.unexpectedEof;
+}
+
+fn parseEuclidianFirst(self: *Self) ParseError!signal_filter.SignalFilter {
+    // eucl 3 8
+    self.lexer.drop();
+
+    const pulses: i64 = if (self.lexer.pop()) |arg|
+        switch (arg) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        }
+    else
+        return error.unexpectedEof;
+
+    const steps: i64 = if (self.lexer.pop()) |arg|
+        switch (arg) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        }
+    else
+        return error.unexpectedEof;
+
+    return signal_filter.SignalFilter{ .euclidianFirst = signal_filter.EuclidianFirst{ .pulses = pulses, .steps = steps } };
 }
 
 // Function parsers

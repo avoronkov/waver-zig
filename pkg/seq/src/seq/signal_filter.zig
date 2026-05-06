@@ -60,12 +60,34 @@ pub const LessThan = struct {
     }
 };
 
+pub const EuclidianFirst = struct {
+    pulses: i64,
+    steps: i64,
+
+    pub fn apply(self: EuclidianFirst, ctx: *Context) bool {
+        var bucket: i64 = 0;
+        var result = false;
+        const bit: usize = @intCast(ctx.bit);
+        for (0..bit+1) |_| {
+            if (bucket >= 0) {
+                bucket -= self.steps;
+                result = true;
+            } else {
+                result = false;
+            }
+            bucket += self.pulses;
+        }
+        return result;
+    }
+};
+
 pub const SignalFilter = union(enum) {
     every: Every,
     everyList: EveryList,
     bitShift: BitShift,
     moreOrEqual: MoreOrEqual,
     lessThan: LessThan,
+    euclidianFirst: EuclidianFirst,
 
     pub fn deinit(self: *SignalFilter) void {
         switch (self.*) {
@@ -81,6 +103,7 @@ pub const SignalFilter = union(enum) {
             .bitShift => |v| v.apply(ctx),
             .lessThan => |v| v.apply(ctx),
             .moreOrEqual => |v| v.apply(ctx),
+            .euclidianFirst => |v| v.apply(ctx),
         };
     }
 };
