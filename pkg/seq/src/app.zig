@@ -221,12 +221,12 @@ test "16-multiple-signal-funcations.pelia" {
 test "17-euclidian.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/17-euclidian.pelia" };
     const output =
-        \\[0] 'sine' freq=195.9977179908729, amp=0.75, bits=1
-        \\[3] 'sine' freq=195.9977179908729, amp=0.75, bits=1
-        \\[6] 'sine' freq=195.9977179908729, amp=0.75, bits=1
-        \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=1
-        \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=1
-        \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=1
+        \\[0] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[3] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[6] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);

@@ -4,5 +4,6 @@ comptime {
     _ = @import("./pelia/lexer.zig");
     _ = @import("./pelia/parse_utils.zig");
     _ = @import("./pelia/parser.zig");
+    _ = @import("./seq/signal_filter.zig");
     _ = @import("./utils/struct.zig");
 }

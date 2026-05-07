@@ -10,7 +10,7 @@ const Self = @This();
 
 allocator: Allocator,
 
-seqCounters: SeqCounters,
+seqCounters: SeqCounters = .empty,
 variables: ?*const Variables = null,
 functions: ?*const Variables = null,
 user_signalers: ?*const std.StringHashMapUnmanaged(Signaler) = null,
@@ -29,7 +29,6 @@ duration_bits: ?i64 = null,
 pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
-        .seqCounters = .empty,
         .scaleFrequencies = &[_]f64{},
     };
 }

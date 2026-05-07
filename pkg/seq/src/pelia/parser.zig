@@ -741,7 +741,7 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
                 }
             }
             return signal_filter.SignalFilter{
-                .everyList = signal_filter.EveryList{ .allocator = self.allocator, .args = res },
+                .everyList = signal_filter.EveryList{ .args = res },
             };
         },
         else => {
@@ -783,7 +783,7 @@ fn parseEuclidianFirst(self: *Self) ParseError!signal_filter.SignalFilter {
     else
         return error.unexpectedEof;
 
-    return signal_filter.SignalFilter{ .euclidianFirst = signal_filter.EuclidianFirst{ .pulses = pulses, .steps = steps } };
+    return signal_filter.SignalFilter{ .euclidianFirst = try signal_filter.EuclidianFirst.init(self.allocator, pulses,  steps) };
 }
 
 // Function parsers

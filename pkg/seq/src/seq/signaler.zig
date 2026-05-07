@@ -33,7 +33,7 @@ pub fn init(a: Allocator) Self {
 
 pub fn deinit(self: *Self) void {
     for (self.signal_filters.items) |*sf| {
-        sf.deinit();
+        sf.deinit(self.allocator);
     }
     self.signal_filters.deinit(self.allocator);
 
@@ -44,10 +44,6 @@ pub fn deinit(self: *Self) void {
         }
     }
     self.signal_funcs.deinit(self.allocator);
-}
-
-pub fn add_filter(self: *Self, f: SignalFilter) !void {
-    try self.signal_filters.append(self.allocator, f);
 }
 
 pub fn add_func(self: *Self, f: SignalFunc) !void {
