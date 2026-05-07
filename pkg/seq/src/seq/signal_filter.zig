@@ -189,7 +189,7 @@ test "EuclidianFirst [V2] 3 / 8" {
     const eu = try EuclidianFirstV2.init(allocator, 3, 8);
     defer eu.deinit(allocator);
 
-    try std.testing.expect(std.mem.eql(i64, eu.durs, &.{3, 0, 0, 3, 0, 0, 2, 0}));
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{3, 0, 0, 3, 0, 0, 2, 0});
 }
 
 test "EuclidianFirst [V2] 4 / 4" {
@@ -197,7 +197,7 @@ test "EuclidianFirst [V2] 4 / 4" {
     const eu = try EuclidianFirstV2.init(allocator, 4, 4);
     defer eu.deinit(allocator);
 
-    try std.testing.expect(std.mem.eql(i64, eu.durs, &.{1, 1, 1, 1}));
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{1, 1, 1, 1});
 }
 
 test "EuclidianFirst [V2] 1 / 4" {
@@ -205,7 +205,7 @@ test "EuclidianFirst [V2] 1 / 4" {
     const eu = try EuclidianFirstV2.init(allocator, 1, 4);
     defer eu.deinit(allocator);
 
-    try std.testing.expect(std.mem.eql(i64, eu.durs, &.{4, 0, 0, 0}));
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{4, 0, 0, 0});
 }
 
 test "EuclidianFirst [V2] 0 / 4" {
@@ -213,10 +213,7 @@ test "EuclidianFirst [V2] 0 / 4" {
     const eu = try EuclidianFirstV2.init(allocator, 0, 4);
     defer eu.deinit(allocator);
 
-    if (!std.mem.eql(i64, eu.durs, &.{0, 0, 0, 0})) {
-        std.debug.print("Failure: {any} != {any}", .{ eu.durs, &.{0, 0, 0, 0}});
-        try std.testing.expect(false);
-    }
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{0, 0, 0, 0});
 }
 
 pub const EuclidianFirst = EuclidianFirstV2;
