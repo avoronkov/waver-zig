@@ -218,6 +218,89 @@ test "EuclidianFirst [V2] 0 / 4" {
 
 pub const EuclidianFirst = EuclidianFirstV2;
 
+pub const EuclidianLast = struct {
+    pulses: i64,
+    steps: i64,
+
+    durs: []i64,
+
+    pub fn init(a: std.mem.Allocator, pulses: i64, steps: i64) !EuclidianLast {
+        var durs = try a.alloc(i64, @intCast(steps));
+        var bucket: i64 = 0;
+        var first: ?usize = null;
+        var prev: ?usize = null;
+        for (durs, 0..) |_, i| {
+            durs[i] = 0;
+            bucket += pulses;
+            if (bucket >= steps) {
+                bucket -= steps;
+                if (first == null) {
+                    first = i;
+                }
+                if (prev) |p| {
+                    durs[p] = @intCast(i - p);
+                }
+                prev = i;
+            }
+        }
+        if (prev) |p| {
+            const usteps: usize = @intCast(steps);
+            const dur: i64 = @intCast(usteps - p + first.?);
+            durs[p] = dur;
+        }
+        return .{
+            .pulses = pulses,
+            .steps = steps,
+            .durs = durs,
+        };
+    }
+
+    pub fn deinit(self: EuclidianLast, a: std.mem.Allocator) void {
+        a.free(self.durs);
+    }
+
+    pub fn apply(self: EuclidianLast, ctx: *Context) bool {
+        const bit: usize = @intCast(@rem(ctx.bit, self.steps));
+        if (self.durs[bit] > 0) {
+            ctx.duration_bits = self.durs[bit];
+            return true;
+        }
+        return false;
+    }
+};
+
+test "EuclidianLast [V2] 3 / 8" {
+    const allocator = std.testing.allocator;
+    const eu = try EuclidianLast.init(allocator, 3, 8);
+    defer eu.deinit(allocator);
+
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{0, 0, 3, 0, 0, 2, 0, 3});
+}
+
+test "EuclidianLast [V2] 4 / 4" {
+    const allocator = std.testing.allocator;
+    const eu = try EuclidianLast.init(allocator, 4, 4);
+    defer eu.deinit(allocator);
+
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{1, 1, 1, 1});
+}
+
+test "EuclidianLast [V2] 1 / 4" {
+    const allocator = std.testing.allocator;
+    const eu = try EuclidianLast.init(allocator, 1, 4);
+    defer eu.deinit(allocator);
+
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{0, 0, 0, 4});
+}
+
+test "EuclidianLast [V2] 0 / 4" {
+    const allocator = std.testing.allocator;
+    const eu = try EuclidianLast.init(allocator, 0, 4);
+    defer eu.deinit(allocator);
+
+    try std.testing.expectEqualSlices(i64, eu.durs, &.{0, 0, 0, 0});
+}
+
 pub const SignalFilter = union(enum) {
     every: Every,
     everyList: EveryList,
