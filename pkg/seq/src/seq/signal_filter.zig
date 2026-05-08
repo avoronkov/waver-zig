@@ -308,11 +308,13 @@ pub const SignalFilter = union(enum) {
     moreOrEqual: MoreOrEqual,
     lessThan: LessThan,
     euclidianFirst: EuclidianFirst,
+    euclidianLast: EuclidianLast,
 
     pub fn deinit(self: *SignalFilter, a: std.mem.Allocator) void {
         switch (self.*) {
             .everyList => |*l| l.deinit(a),
             .euclidianFirst => |*eu| eu.deinit(a),
+            .euclidianLast => |*eu| eu.deinit(a),
             else => {},
         }
     }
@@ -325,6 +327,7 @@ pub const SignalFilter = union(enum) {
             .lessThan => |v| v.apply(ctx),
             .moreOrEqual => |v| v.apply(ctx),
             .euclidianFirst => |v| v.apply(ctx),
+            .euclidianLast => |v| v.apply(ctx),
         };
     }
 };
