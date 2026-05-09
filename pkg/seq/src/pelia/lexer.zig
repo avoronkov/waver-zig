@@ -98,7 +98,6 @@ pub fn init(a: Allocator, reader: *std.Io.Reader) !Self {
     const n = try reader.readSliceShort(&content);
 
     const tokens = try parse_tokens(a, content[0..n]);
-    std.log.debug("Lexer: tokens = {any}\n", .{tokens});
 
     return .{
         .allocator = a,

@@ -100,9 +100,12 @@ fn saveWavFile(self: Self) !void {
         var stdout_file_writer: std.Io.File.Writer = out.writer(self.io, &stdout_buffer);
         const writer = &stdout_file_writer.interface;
 
-        var encoder = try wav.encoder(i16, writer, stdout_file_writer, pulse.SAMPLE_RATE, pulse.paSampleSpec.channels);
+        const data_size = self.output.items.len * @sizeOf(i16);
+
+        var encoder = try wav.encoder(i16, writer, stdout_file_writer, pulse.SAMPLE_RATE, pulse.paSampleSpec.channels, data_size);
 
         try encoder.write(i16, self.output.items);
-        try encoder.finalize();
+        // For some reason finalize does not work correctly with file writer.
+        // try encoder.finalize();
     }
 }

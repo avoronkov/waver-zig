@@ -240,6 +240,7 @@ pub fn Encoder(
             seekable: SeekableType,
             sample_rate: usize,
             channels: usize,
+            data_size: ?usize,
         ) !Self {
             const bits = switch (T) {
                 u8 => 8,
@@ -280,6 +281,10 @@ pub fn Encoder(
                 },
             };
 
+            if (data_size) |ds| {
+                self.data_size = ds;
+            }
+
             try self.writeHeader();
             return self;
         }
@@ -307,6 +312,7 @@ pub fn Encoder(
                 },
                 else => @compileError(bad_type),
             }
+            try self.writer.flush();
         }
 
         fn writeHeader(self: *Self) !void {
@@ -327,6 +333,8 @@ pub fn Encoder(
 
             try self.writer.writeAll("data");
             try self.writer.writeInt(u32, @intCast(self.data_size), .little);
+
+            try self.writer.flush();
         }
 
         /// Must be called once writing is complete. Writes total size to file header.
@@ -343,8 +351,9 @@ pub fn encoder(
     seekable: anytype,
     sample_rate: usize,
     channels: usize,
+    data_size: ?usize,
 ) !Encoder(T, @TypeOf(seekable)) {
-    return Encoder(T, @TypeOf(seekable)).init(writer, seekable, sample_rate, channels);
+    return Encoder(T, @TypeOf(seekable)).init(writer, seekable, sample_rate, channels, data_size);
 }
 
 test "pcm(bits=8) sample_rate=22050 channels=1" {
@@ -553,7 +562,7 @@ fn testEncodeDecode(comptime T: type, comptime sample_rate: usize) !void {
     // var stream = std.io.fixedBufferStream(buf);
     var stream = std.Io.Writer.fixed(buf);
     var seekableStream = SeekableFixedWriter{ .writer = &stream };
-    var wav_encoder = try encoder(T, &stream, &seekableStream, sample_rate, 1);
+    var wav_encoder = try encoder(T, &stream, &seekableStream, sample_rate, 1, null);
 
     var phase: f32 = 0.0;
     var i: usize = 0;

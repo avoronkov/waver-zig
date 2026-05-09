@@ -69,7 +69,7 @@ fn parseWavReader(a: Allocator, reader: *std.Io.Reader) !Sample {
     var decoder = try wav.decoder(reader);
 
     var data: std.ArrayListUnmanaged(f32) = .empty;
-    errdefer data.deinit(a);
+    defer data.deinit(a);
 
     var buff: [64]f32 = undefined;
     while (true) {
@@ -80,12 +80,18 @@ fn parseWavReader(a: Allocator, reader: *std.Io.Reader) !Sample {
         }
     }
 
+    // Hack to get data buffer of correct size.
+    const sample_size = decoder.fmt.bits / 8;
+    const items_len = decoder.data_size / sample_size;
+    const items: []f32 = try a.alloc(f32, items_len);
+    @memcpy(items, data.items[0..items_len]);
+
     const sample_rate: f64 = @floatFromInt(decoder.fmt.sample_rate);
 
     return .{
         .allocator = a,
         .sample_rate = sample_rate,
-        .data = try data.toOwnedSlice(a),
+        .data = items,
         .channels = decoder.fmt.channels,
     };
 }
