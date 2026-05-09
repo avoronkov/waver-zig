@@ -742,7 +742,7 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
                 }
             }
             return signal_filter.SignalFilter{
-                .everyList = signal_filter.EveryList{ .args = res },
+                .everyList = try signal_filter.EveryList.init(self.allocator, res),
             };
         },
         else => {

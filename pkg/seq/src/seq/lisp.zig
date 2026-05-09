@@ -109,7 +109,7 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
         },
         else => {},
     }
-    switch (try eval(a, ctx, func[1])) {
+    switch (try eval(a, ctx, func[0])) {
         .list => |lres| {
             const i = rand.random.intRangeLessThan(usize, 0, lres.len);
             return lres[i];

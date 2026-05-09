@@ -12,25 +12,43 @@ pub const Every = struct {
 
 pub const EveryList = struct {
     args: []i64,
+    durs: []i64,
+
+    pub fn init(a: std.mem.Allocator, args: []i64) !EveryList {
+        var total: usize = 0;
+        for (args) |arg| {
+            total += @intCast(arg);
+        }
+        const durs = try a.alloc(i64, total);
+        @memset(durs, 0);
+
+        var cur: usize = 0;
+        for (args) |arg| {
+            durs[cur] = arg;
+            cur += @intCast(arg);
+        }
+        return .{
+            .args = args,
+            .durs = durs,
+        };
+    }
 
     pub fn apply(self: EveryList, ctx: *Context) bool {
-        var loop: i64 = 0;
-        for (self.args) |arg| {
-            loop += arg;
+        if (ctx.bit < 0) {
+            return false;
         }
-        const x = @rem(ctx.bit, loop);
-        var s: i64 = 0;
-        for (self.args) |arg| {
-           if (x == s) {
-               return true;
-           }
-           s += arg;
+        const llen: i64 = @intCast(self.durs.len);
+        const bit: usize = @intCast(@rem(ctx.bit, llen));
+        if (self.durs[bit] > 0) {
+            ctx.duration_bits = self.durs[bit];
+            return true;
         }
         return false;
     }
 
     pub fn deinit(self: *EveryList, a: std.mem.Allocator) void {
         a.free(self.args);
+        a.free(self.durs);
     }
 };
 
