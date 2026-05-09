@@ -154,7 +154,7 @@ pub fn scan_ident(s: []const u8) ?ScanResult([]const u8) {
             if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z')) {
                 break i;
             }
-        } else if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z' or c >= '0' and c <= '9')) {
+        } else if (!(c >= 'a' and c <= 'z' or c >= 'A' and c <= 'Z' or c >= '0' and c <= '9' or c == '\'')) {
             break i;
         }
     } else s.len;

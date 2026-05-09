@@ -563,6 +563,7 @@ fn parseAssignment(
         else => {},
     }
     if (t2 != .assign) {
+        std.debug.print("Unexpected token when parsing assignment: {any}\n", .{ t2 });
         return error.unexpectedToken;
     }
 

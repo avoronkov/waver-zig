@@ -1,5 +1,6 @@
 const std = @import("std");
 const parse_utils = @import("./parse_utils.zig");
+const slice_utils = @import("../utils/slice.zig");
 
 const Allocator = std.mem.Allocator;
 
@@ -195,7 +196,7 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
             i += res.offset;
             continue :LOOP;
         }
-        std.log.err("Unknown token here: {s}", .{ content[i..(i+64)]});
+        std.log.err("Unknown token here: {s}", .{ slice_utils.takeNChars(content, i, i+64)});
         return error.UnknownToken;
     }
 

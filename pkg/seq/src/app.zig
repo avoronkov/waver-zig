@@ -232,6 +232,24 @@ test "17-euclidian.pelia" {
     try testExample(input, output);
 }
 
+test "18-euclidian-last.pelia" {
+    if (true) {
+        return error.SkipZigTest;
+    }
+    const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/18-euclidian-last.pelia" };
+    const output =
+        \\[2] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[5] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[6] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=3
+        \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\
+    ;
+    try testExample(input, output);
+}
+
+
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;
     const clock = std.Io.Clock.real;
