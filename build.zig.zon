@@ -10,6 +10,9 @@
         .seq = .{
             .path = "./pkg/seq",
         },
+        .wav = .{
+            .path = "./pkg/wav",
+        },
     },
     .paths = .{
         "build.zig",

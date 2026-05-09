@@ -1,5 +1,5 @@
 const std = @import("std");
-const pulse = @import("./pulse.zig");
+const player = @import("./player.zig");
 const seq = @import("seq");
 
 pub fn main(init: std.process.Init) !void {
@@ -16,16 +16,22 @@ pub fn main(init: std.process.Init) !void {
 
     app.beeper.setTempo(60);
 
-    const s = try pulse.paSimpleNew();
-    defer pulse.paSimpleFree(s);
+    var play = try player.init(allocator, io, clock);
+    defer play.deinit();
+
+    if (app.args.dump_wav) {
+        if (app.args.input) |input| {
+            play.output_file = try std.fmt.allocPrint(allocator, "{s}.wav", .{ input });
+        } else {
+            std.debug.panic("Input file is not specified.", .{});
+        }
+    }
 
     var t = try app.run();
 
-    try pulse.play(s, io, clock, &app.tape);
+    try play.play(&app.tape);
 
     t.join();
-
-    try pulse.paSimpleDrain(s);
 
     std.log.info("OK", .{});
 }

@@ -17,17 +17,17 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs
     const args = try Args.init(allocator, pargs);
     errdefer args.deinit();
 
-    if (args.input.len == 0) {
+    const input = if (args.input) |input| input else {
         std.log.err("No input file specified.\n", .{});
         return error.noInput;
-    }
+    };
 
     rand.init(io, clock);
 
     const tape = Tape.init(allocator);
     errdefer tape.deinit();
 
-    var beeper = try Beeper.init(allocator, io, clock, args.input, args.stop);
+    var beeper = try Beeper.init(allocator, io, clock, input, args.stop);
     errdefer beeper.deinit();
 
     beeper.log = log;
@@ -244,6 +244,18 @@ test "18-euclidian-last.pelia" {
         \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=3
         \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=3
         \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\
+    ;
+    try testExample(input, output);
+}
+
+test "20-lisp.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/20-lisp.pelia" };
+    const output =
+        \\[0] 'in' freq=440, amp=0.75, bits=1
+        \\[1] 'in2' freq=660, amp=0.75, bits=2
+        \\[4] 'in' freq=440, amp=0.75, bits=1
+        \\[5] 'in2' freq=660, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);

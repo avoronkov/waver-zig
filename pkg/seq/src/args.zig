@@ -4,37 +4,42 @@ const Allocator = std.mem.Allocator;
 const Self = @This();
 
 allocator: Allocator,
-input: []const u8,
-stop: ?i64,
+input: ?[]const u8 = null,
+dump_wav: bool = false,
+stop: ?i64 = null,
 
 pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
-    var ss = try a.alloc(u8, 0);
-    errdefer a.free(ss);
-
-    var stop: ?i64 = null;
+    var res = Self{
+        .allocator = a,
+    };
 
     var args = pargs.iterate();
     _ = args.next();
     while (args.next()) |ar| {
-        if (std.mem.eql(u8, ar, "--stop")) {
+        if (std.mem.eql(u8, ar, "--stop") or std.mem.eql(u8, ar, "-s")) {
             if (args.next()) |ar2| {
-                stop = try std.fmt.parseInt(i64, ar2, 10);
+                res.stop = try std.fmt.parseInt(i64, ar2, 10);
             } else {
                 return error.badArg;
             }
             continue;
         }
-        a.free(ss);
-        ss = try a.dupe(u8, ar);
-        break;
+        if (std.mem.eql(u8, ar, "--dump-wav") or std.mem.eql(u8, ar, "-w")) {
+            res.dump_wav = true;
+            continue;
+        }
+
+        if (res.input) |input| {
+            std.log.err("Input file is specified twice: {s}, {s}", .{input, ar});
+        }
+
+        res.input = try a.dupe(u8, ar);
     }
-    return Self{
-        .allocator = a,
-        .input = ss,
-        .stop = stop,
-    };
+    return res;
 }
 
 pub fn deinit(self: Self) void {
-    self.allocator.free(self.input);
+    if (self.input) |input| {
+        self.allocator.free(input);
+    }
 }

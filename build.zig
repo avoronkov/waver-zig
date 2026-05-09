@@ -35,6 +35,13 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("seq", dseq);
 
+    const dwav = b.dependency("wav", .{
+        .target = target,
+        .optimize = optimize,
+    }).module("wav");
+
+    exe.root_module.addImport("wav", dwav);
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
