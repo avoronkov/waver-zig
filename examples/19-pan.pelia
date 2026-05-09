@@ -1,0 +1,4 @@
+l = sine | pan l=1.0 r=0.25
+r = sine | pan l=0.25 r=1.0
+
+:2 @l,r G3 0.75 1

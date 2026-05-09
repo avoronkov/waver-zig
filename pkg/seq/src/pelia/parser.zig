@@ -589,6 +589,7 @@ fn parseAssignment(
             self.lexer.drop();
             const smp = try sample.parseSampleFile(self.allocator, self.io, filepath);
             errdefer smp.deinit();
+            std.log.info("Sample {s}: sample_rate={}, channels={}, data.len={}", .{ filepath, smp.sample_rate, smp.channels, smp.data.len });
             const wi = wave_input.WaveInput{ .sample = smp };
             var inst = Instrument.init(self.allocator, wi);
             errdefer inst.deinit();

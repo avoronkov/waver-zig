@@ -54,20 +54,20 @@ pub fn add_filter(self: *Self, f: filter.Filter) !void {
     try self.filters.append(self.allocator, f);
 }
 
-pub fn value(self: Self, t: f64, note: Note) EofError!f64 {
+pub fn value(self: Self, t: f64, note: Note, channel: usize) EofError!f64 {
    const n: i32 = @intCast(self.filters.items.len); 
-   return self.value_of(n - 1, t, note);
+   return self.value_of(n - 1, t, note, channel);
 }
 
-pub fn value_of(self: *const Self, n: i32, t: f64, note: Note) EofError!f64 {
+pub fn value_of(self: *const Self, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
     if (n == -1) {
-        return wave_input.value(&self.wf, t, note);
+        return wave_input.value(&self.wf, t, note, channel);
     }
 
     // TODO get rid of cyclic init
     const c = Chain.init(self);
     const i: usize = @intCast(n);
-    return self.filters.items[i].apply(c, n, t, note);
+    return self.filters.items[i].apply(c, n, t, note, channel);
 }
 
 pub fn wave(self: Self, note: Note, start: ?f64) !Wave {
@@ -85,8 +85,8 @@ pub const Wave = struct {
     note: Note,
     inst: Self,
 
-    pub fn value(self: Wave, t: f64) EofError!f64 {
-        return self.inst.value(t, self.note);
+    pub fn value(self: Wave, t: f64, channel: usize) EofError!f64 {
+        return self.inst.value(t, self.note, channel);
     }
 
     pub fn deinit(self: *Wave) void {

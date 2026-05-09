@@ -8,9 +8,9 @@ pub const WaveInput = union(enum) {
     sample: sample.Sample,
 };
 
-pub fn value(input: *const WaveInput, t: f64, note: Note) EofError!f64 {
+pub fn value(input: *const WaveInput, t: f64, note: Note, channel: usize) EofError!f64 {
     return switch (input.*) {
-        .sample => |s| s.value(t, note),
+        .sample => |s| s.value(t, note, channel),
         .waveform => |wf| wf(t, note),
     };
 }

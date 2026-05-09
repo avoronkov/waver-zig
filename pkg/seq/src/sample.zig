@@ -13,9 +13,10 @@ pub const Sample = struct {
     data: []f32,
     channels: usize,
 
-    pub fn value(self: *const Sample, t: f64, note: Note) EofError!f64 {
+    pub fn value(self: *const Sample, t: f64, note: Note, channel: usize) EofError!f64 {
+        _ = note;
         const n: usize = @intFromFloat(t * self.sample_rate);
-        const idx: usize = @intCast(self.channels * n + @rem(note.channel, self.channels));
+        const idx: usize = @intCast(self.channels * n + @rem(channel, self.channels));
         if (idx >= self.data.len) {
             return error.Eof;
         }

@@ -14,21 +14,22 @@ pub const Am = struct {
     freq: f64,
     amp: f64,
 
-    pub fn apply(self: Am, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn apply(self: Am, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
         const x = 2 * std.math.pi * t * self.freq;
         const am = std.math.sin(x);
         const mp = (2.0 - self.amp + self.amp * am) / 2.0;
-        const v = try chain.value_of(n - 1, t, note);
+        const v = try chain.value_of(n - 1, t, note, channel);
         return v * mp;
     }
 };
 
 const TestChain = struct {
-    pub fn value_of(self: *const TestChain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn value_of(self: *const TestChain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
         _ = self;
         _ = n;
         _ = t;
         _ = note;
+        _ = channel;
         return 0.5;
     }
 };
@@ -47,7 +48,7 @@ test "AM benchmark" {
 
     const start = clock.now(io);
     for (0..10000) |_| {
-        _ = am.apply(chain, 1, 2.0, note) catch unreachable;
+        _ = am.apply(chain, 1, 2.0, note, 0) catch unreachable;
     }
     const dur = start.untilNow(io, clock);
     const ns = dur.toNanoseconds();
@@ -57,8 +58,8 @@ test "AM benchmark" {
 pub const Exp = struct {
     value: f64,
 
-    pub fn apply(self: Exp, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        const v = try chain.value_of(n - 1, t, note);
+    pub fn apply(self: Exp, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
+        const v = try chain.value_of(n - 1, t, note, channel);
         return std.math.pow(f64, v, self.value);
     }
 };
@@ -78,7 +79,7 @@ test "Exp benchmark" {
 
     const start = clock.now(io);
     for (0..10000) |_| {
-        _ = exp.apply(chain, 1, 2.0, note) catch unreachable;
+        _ = exp.apply(chain, 1, 2.0, note, 0) catch unreachable;
     }
     const dur = start.untilNow(io, clock);
     const ns = dur.toNanoseconds();
@@ -108,8 +109,8 @@ pub const LispCode = struct {
         };
     }
 
-    pub fn apply(self: *const LispCode, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        const v = try chain.value_of(n - 1, t, note);
+    pub fn apply(self: *const LispCode, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
+        const v = try chain.value_of(n - 1, t, note, channel);
         var ctx = Context.init(self.allocator);
         defer ctx.deinit();
         ctx.input = v;
@@ -153,7 +154,7 @@ test "LispCode benchmark" {
 
     const start = clock.now(io);
     for (0..10000) |_| {
-        _ = codeFilter.apply(chain, 1, 2.0, note) catch unreachable;
+        _ = codeFilter.apply(chain, 1, 2.0, note, 0) catch unreachable;
     }
     const dur = start.untilNow(io, clock);
     const ns = dur.toNanoseconds();
@@ -164,9 +165,10 @@ pub const Pan = struct {
     l: f64,
     r: f64,
 
-    pub fn apply(self: Pan, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        const mp = if (note.channel == 0) self.l else self.r;
-        const v = try chain.value_of(n - 1, t, note);
+    pub fn apply(self: Pan, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
+        const mp = if (channel == 0) self.l else self.r;
+        const v = try chain.value_of(n - 1, t, note, channel);
+        std.debug.print("Pan t={}, chan={}, mp={}, v={}\n", .{ t, channel, mp, v });
         return v * mp;
     }
 };
@@ -176,10 +178,10 @@ pub const Flanger = struct {
     maxShift: f64,
     abs: bool,
 
-    pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
         _ = self;
         // TODO
-        const v = try chain.value_of(n - 1, t, note);
+        const v = try chain.value_of(n - 1, t, note, channel);
         return v;
     }
 };
@@ -192,10 +194,10 @@ pub const Adsr = struct {
     sustainLen: f64,
     releaseLen: f64,
 
-    pub fn apply(self: Adsr, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn apply(self: Adsr, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
         _ = self;
         // TODO
-        const v = try chain.value_of(n - 1, t, note);
+        const v = try chain.value_of(n - 1, t, note, channel);
         return v;
     }
 };
@@ -230,14 +232,14 @@ pub const Filter = union(enum) {
         };
     }
 
-    pub fn apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn apply(f: Filter, chain: Chain, n: i32, t: f64, note: Note, channel: usize) EofError!f64 {
         return switch (f) {
-            .am => |v| v.apply(chain, n, t, note),
-            .exp => |v| v.apply(chain, n, t, note),
-            .pan => |v| v.apply(chain, n, t, note),
-            .flanger => |v| v.apply(chain, n, t, note),
-            .adsr => |v| v.apply(chain, n, t, note),
-            .code => |v| v.apply(chain, n, t, note),
+            .am => |v| v.apply(chain, n, t, note, channel),
+            .exp => |v| v.apply(chain, n, t, note, channel),
+            .pan => |v| v.apply(chain, n, t, note, channel),
+            .flanger => |v| v.apply(chain, n, t, note, channel),
+            .adsr => |v| v.apply(chain, n, t, note, channel),
+            .code => |v| v.apply(chain, n, t, note, channel),
         };
     }
 };

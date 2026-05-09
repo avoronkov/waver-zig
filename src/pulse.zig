@@ -3,11 +3,12 @@ const std = @import("std");
 const c = @import("c");
 
 pub const SAMPLE_RATE = 48000;
+// pub const SAMPLE_RATE = 44100;
 
 pub const paSampleSpec: c.pa_sample_spec = .{
     .format = c.PA_SAMPLE_S16LE,
     .rate = SAMPLE_RATE,
-    .channels = 1,
+    .channels = 2,
 };
 
 pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
