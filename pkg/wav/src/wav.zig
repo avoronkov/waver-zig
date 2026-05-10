@@ -7,7 +7,7 @@ const expectError = std.testing.expectError;
 const bad_type = "sample type must be u8, i16, i24, or f32";
 
 fn readFloat(comptime T: type, reader: *std.Io.Reader) !T {
-    var f: T = undefined;
+    var f: T = 0;
     try reader.readSliceAll(std.mem.asBytes(&f));
     return f;
 }

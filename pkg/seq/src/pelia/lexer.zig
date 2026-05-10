@@ -50,12 +50,11 @@ pub const Token = union(enum) {
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
-const expectEqualStrings = std.testing.expectEqualStrings;
 
 test "Token" {
     const token: Token = .colon;
 
-    try expect(token == Token.colon);
+    try expectEqual(token, Token.colon);
 }
 
 const LiteralToken = struct {
@@ -281,12 +280,12 @@ fn has_prefix(str: []const u8, prefix: []const u8) bool {
 
 fn tokensEql(a: []const Token, b: []const Token) bool {
     if (a.len != b.len) {
-        std.debug.print("Tokens lists have different length ({} != {}): {any} != {any}", .{a.len, b.len, a, b});
+        std.log.err("Tokens lists have different length ({} != {}): {any} != {any}", .{a.len, b.len, a, b});
         return false;
     }
     for (a, 0..) |it, idx| {
         if (!it.eql(b[idx])) {
-            std.debug.print("Tokens lists are different at index {}: {any} != {any}", .{idx, a, b});
+            std.log.err("Tokens lists are different at index {}: {any} != {any}", .{idx, a, b});
             return false;
         }
     }
