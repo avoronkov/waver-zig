@@ -9,7 +9,7 @@ const literal = @import("./literal.zig");
 const Allocator = std.mem.Allocator;
 const Literal = literal.Literal;
 
-const EvalError = error{emptyList,badValue,OutOfMemory};
+const EvalError = error{ emptyList, badValue, OutOfMemory };
 
 pub fn eval(a: Allocator, ctx: *Context, expr: Literal) EvalError!Value {
     return switch (expr) {
@@ -22,7 +22,7 @@ pub fn eval(a: Allocator, ctx: *Context, expr: Literal) EvalError!Value {
     };
 }
 
-fn evalIdent(a: Allocator, ctx: *Context, id:primitives.Ident) EvalError!Value {
+fn evalIdent(a: Allocator, ctx: *Context, id: primitives.Ident) EvalError!Value {
     if (std.mem.eql(u8, id.string(), "input")) {
         return Value{ .float = ctx.input };
     } else if (std.mem.eql(u8, id.string(), "time")) {
@@ -74,16 +74,17 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
 // .func name arg
 fn evalFunc(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     if (args.len != 2) {
-        std.debug.panic("evalFunc: {any}", .{ args });
+        std.debug.panic("evalFunc: {any}", .{args});
     }
-    const funcName = switch(args[0]) {
+    const funcName = switch (args[0]) {
         .ident => |i| i.string(),
-        else => std.debug.panic("evalFunc: incorrect funcName argument: {any}", .{ args[0] }),
+        else => std.debug.panic("evalFunc: incorrect funcName argument: {any}", .{args[0]}),
     };
 
-    const funcBody = if (ctx.functions) |functions| 
+    const funcBody = if (ctx.functions) |functions|
         functions.get(funcName) orelse std.debug.panic("evalFunc unknown function: {s}", .{funcName})
-    else std.debug.panic("evalFunc functions undefined", .{});
+    else
+        std.debug.panic("evalFunc functions undefined", .{});
 
     const arg = try eval(a, ctx, args[1]);
     defer value.free_value(a, arg);
@@ -98,7 +99,7 @@ fn evalFunc(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value 
 // .rand list
 fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
     if (func.len != 1) {
-        std.debug.panic("evalRand: {any}", .{ func });
+        std.debug.panic("evalRand: {any}", .{func});
     }
     switch (func[0]) {
         .list => |l| {
@@ -123,7 +124,7 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
 // .seq counter list
 fn evalSeq(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
     if (func.len != 2) {
-        std.debug.panic("evalSeq: {any}", .{ func });
+        std.debug.panic("evalSeq: {any}", .{func});
     }
     const counter: usize = @intCast(func[0].number);
     const i = ctx.getSeqCounter(counter);
@@ -187,11 +188,15 @@ fn evalPlus(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
 fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: []const Literal) EvalError!Value {
     var sum = first;
     for (args) |it| {
-        const val =  try eval(a, ctx, it);
+        const val = try eval(a, ctx, it);
         defer value.free_value(a, val);
         switch (val) {
-            .float => |f| if (T == f64) { sum += f; } else return error.badValue,
-            .number => |n| if (T == i64) { sum += n; } else return error.badValue,
+            .float => |f| if (T == f64) {
+                sum += f;
+            } else return error.badValue,
+            .number => |n| if (T == i64) {
+                sum += n;
+            } else return error.badValue,
             .list => |l| {
                 if (args.len != 1) {
                     return error.badValue;
@@ -200,8 +205,12 @@ fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: [
                 errdefer value.free_value(a, .{ .list = r });
                 for (0.., l) |i, v| {
                     switch (v) {
-                        .float => |f| if (T == f64) { r[i] = .{ .float = first + f }; } else return error.badValue,
-                        .number => |n| if (T == i64) { r[i] = .{ .number = first + n }; } else return error.badValue,
+                        .float => |f| if (T == f64) {
+                            r[i] = .{ .float = first + f };
+                        } else return error.badValue,
+                        .number => |n| if (T == i64) {
+                            r[i] = .{ .number = first + n };
+                        } else return error.badValue,
                         else => return error.badValue,
                     }
                 }
@@ -216,12 +225,12 @@ fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: [
 fn evalMultiply(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
     var res: f64 = 1;
     for (0.., func) |i, it| {
-        const val =  try eval(a, ctx, it);
+        const val = try eval(a, ctx, it);
         defer value.free_value(a, val);
         switch (val) {
             .float => |f| res *= f,
             else => {
-                std.log.err("Not float result of {any} [{}]: {any}\n", .{it, i, val});
+                std.log.err("Not float result of {any} [{}]: {any}\n", .{ it, i, val });
                 return error.badValue;
             },
         }

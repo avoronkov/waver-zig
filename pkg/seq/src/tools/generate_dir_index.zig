@@ -41,7 +41,7 @@ pub fn main(init: std.process.Init) !void {
         const file_data = try dir.readFileAlloc(io, item.path, init.gpa, .unlimited);
 
         // std.debug.print("{s}\n", .{item.path});
-        try writer.print("    .{{ \"{s}\", &[_]u8{any} }},\n", .{item.path, file_data});
+        try writer.print("    .{{ \"{s}\", &[_]u8{any} }},\n", .{ item.path, file_data });
         init.gpa.free(file_data);
     }
     try writer.print(

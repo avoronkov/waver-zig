@@ -194,7 +194,7 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
             i += res.offset;
             continue :LOOP;
         }
-        std.log.err("Unknown token here: {s}", .{ slice_utils.takeNChars(content, i, i+64)});
+        std.log.err("Unknown token here: {s}", .{slice_utils.takeNChars(content, i, i + 64)});
         return error.UnknownToken;
     }
 
@@ -280,12 +280,12 @@ fn has_prefix(str: []const u8, prefix: []const u8) bool {
 
 fn tokensEql(a: []const Token, b: []const Token) bool {
     if (a.len != b.len) {
-        std.log.err("Tokens lists have different length ({} != {}): {any} != {any}", .{a.len, b.len, a, b});
+        std.log.err("Tokens lists have different length ({} != {}): {any} != {any}", .{ a.len, b.len, a, b });
         return false;
     }
     for (a, 0..) |it, idx| {
         if (!it.eql(b[idx])) {
-            std.log.err("Tokens lists are different at index {}: {any} != {any}", .{idx, a, b});
+            std.log.err("Tokens lists are different at index {}: {any} != {any}", .{ idx, a, b });
             return false;
         }
     }

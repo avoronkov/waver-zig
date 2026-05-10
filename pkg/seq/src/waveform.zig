@@ -53,7 +53,6 @@ pub fn semisine(t: f64, note: Note) !f64 {
     return 2 * @abs(std.math.sin(x)) - 1;
 }
 
-
 pub const waveforms = std.static_string_map.StaticStringMap(WaveForm).initComptime(.{
     .{ "sine", sine },
     .{ "triangle", triangle },

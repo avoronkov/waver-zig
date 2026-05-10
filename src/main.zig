@@ -21,7 +21,7 @@ pub fn main(init: std.process.Init) !void {
 
     if (app.args.dump_wav) {
         if (app.args.input) |input| {
-            play.output_file = try std.fmt.allocPrint(allocator, "{s}.wav", .{ input });
+            play.output_file = try std.fmt.allocPrint(allocator, "{s}.wav", .{input});
         } else {
             std.debug.panic("Input file is not specified.", .{});
         }

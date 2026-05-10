@@ -193,27 +193,27 @@ pub const Adsr = struct {
     releaseLen: f64,
 
     pub fn apply(self: Adsr, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-	var amp: f64 = 0;
-	const dur = note.dur;
+        var amp: f64 = 0;
+        const dur = note.dur;
 
-	const adsrLen = self.attackLen + self.decayLen + self.sustainLen + self.releaseLen;
+        const adsrLen = self.attackLen + self.decayLen + self.sustainLen + self.releaseLen;
 
         const attackLen = self.attackLen * dur / adsrLen;
-	if (t >= 0 and t < attackLen) {
-	    // attack
-	    amp = t * self.attackLevel / attackLen;
-	} else if (t < (self.attackLen+self.decayLen)*dur/adsrLen) {
-	    // decay
-	    amp = self.attackLevel - (self.attackLevel-self.decayLevel)*(t-(self.attackLen*dur)/adsrLen)/(self.decayLen*dur/adsrLen);
-	} else if (t < (self.attackLen+self.decayLen+self.sustainLen)*dur/adsrLen) {
-	    // sustain
-	    amp = self.decayLevel;
-	} else if (t < dur) {
-	    // release
-	    amp = (dur - t) * self.decayLevel * adsrLen / (dur * self.releaseLen);
-	} else {
-	    return error.Eof;
-	}
+        if (t >= 0 and t < attackLen) {
+            // attack
+            amp = t * self.attackLevel / attackLen;
+        } else if (t < (self.attackLen + self.decayLen) * dur / adsrLen) {
+            // decay
+            amp = self.attackLevel - (self.attackLevel - self.decayLevel) * (t - (self.attackLen * dur) / adsrLen) / (self.decayLen * dur / adsrLen);
+        } else if (t < (self.attackLen + self.decayLen + self.sustainLen) * dur / adsrLen) {
+            // sustain
+            amp = self.decayLevel;
+        } else if (t < dur) {
+            // release
+            amp = (dur - t) * self.decayLevel * adsrLen / (dur * self.releaseLen);
+        } else {
+            return error.Eof;
+        }
 
         const v = try chain.value_of(n - 1, t, note);
         return v * amp;

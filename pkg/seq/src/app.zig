@@ -286,7 +286,6 @@ test "february/01-samples.pelia" {
     t.join();
 }
 
-
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;
     const clock = std.Io.Clock.real;

@@ -563,7 +563,7 @@ fn parseAssignment(
         else => {},
     }
     if (t2 != .assign) {
-        std.log.err("Unexpected token when parsing assignment: {any}", .{ t2 });
+        std.log.err("Unexpected token when parsing assignment: {any}", .{t2});
         return error.unexpectedToken;
     }
 
@@ -786,7 +786,7 @@ fn parseEuclidianFirst(self: *Self) ParseError!signal_filter.SignalFilter {
     else
         return error.unexpectedEof;
 
-    return signal_filter.SignalFilter{ .euclidianFirst = try signal_filter.EuclidianFirst.init(self.allocator, pulses,  steps) };
+    return signal_filter.SignalFilter{ .euclidianFirst = try signal_filter.EuclidianFirst.init(self.allocator, pulses, steps) };
 }
 
 // Function parsers

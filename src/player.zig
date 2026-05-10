@@ -30,7 +30,7 @@ pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8)
 
 pub fn deinit(self: *Self) void {
     pulse.paSimpleDrain(self.pa_simple) catch |err| {
-        std.log.err("paSimpleDrain failed: {t}", .{ err });
+        std.log.err("paSimpleDrain failed: {t}", .{err});
     };
     pulse.paSimpleFree(self.pa_simple);
     if (self.output_file) |of| {
@@ -93,7 +93,7 @@ pub fn play(self: *Self, wave: anytype) !void {
 
 fn saveWavFile(self: Self) !void {
     if (self.output_file) |output_file| {
-        std.log.info("Saving wav file: {s}\n", .{ output_file });
+        std.log.info("Saving wav file: {s}\n", .{output_file});
         var out = try std.Io.Dir.cwd().createFile(self.io, output_file, .{});
         defer out.close(self.io);
 

@@ -35,7 +35,7 @@ pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
         }
 
         if (res.input) |input| {
-            std.log.err("Input file is specified twice: {s}, {s}", .{input, ar});
+            std.log.err("Input file is specified twice: {s}, {s}", .{ input, ar });
         }
 
         res.input = try a.dupe(u8, ar);

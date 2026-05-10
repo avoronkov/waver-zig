@@ -15,7 +15,7 @@ pub const Signals = []Signal;
 
 const SignalList = std.ArrayListUnmanaged(Signal);
 
-pub const SignalError = error{badInstrument,badFrequency,badAmplitude,badDuration};
+pub const SignalError = error{ badInstrument, badFrequency, badAmplitude, badDuration };
 
 pub const SignalFunc = struct {
     inst: Literal,
@@ -38,7 +38,6 @@ pub const SignalFunc = struct {
                         else => return error.badInstrument,
                     }
                 }
-
             },
             else => return error.badInstrument,
         }
@@ -83,7 +82,10 @@ pub const SignalFunc = struct {
         defer value.free_value(a, ampVal);
         const amp = switch (ampVal) {
             .float => |v| v,
-            .number => |v| blk: { const f: f64 = @floatFromInt(v);  break :blk f / 16.0; },
+            .number => |v| blk: {
+                const f: f64 = @floatFromInt(v);
+                break :blk f / 16.0;
+            },
             else => return error.badAmplitude,
         };
 

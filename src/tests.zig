@@ -1,2 +1,1 @@
-comptime {
-}
+comptime {}

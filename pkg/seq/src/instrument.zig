@@ -80,8 +80,8 @@ pub fn isFinite(self: Self) bool {
 }
 
 pub fn value(self: Self, t: f64, note: Note) EofError!f64 {
-   const n: i32 = @intCast(self.filters.items.len); 
-   return self.value_of(n - 1, t, note);
+    const n: i32 = @intCast(self.filters.items.len);
+    return self.value_of(n - 1, t, note);
 }
 
 pub fn value_of(self: *const Self, n: i32, t: f64, note: Note) EofError!f64 {

@@ -77,13 +77,13 @@ pub fn run(self: *Self, tape: *Tape) !void {
         }
         std.log.info("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
-             self.handle_signaler(s, bit, tape) catch |err| {
-                 std.log.err("Error: {t}", .{ err });
-             };
+            self.handle_signaler(s, bit, tape) catch |err| {
+                std.log.err("Error: {t}", .{err});
+            };
         }
         bit += 1;
         self.check_file_modified() catch |err| {
-             std.log.err("Error checking file update '{s}': {t}", .{ self.file, err });
+            std.log.err("Error checking file update '{s}': {t}", .{ self.file, err });
         };
         try self.sleep(bit, bit_start);
     }
@@ -93,7 +93,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
 pub fn setTempo(self: *Self, tempo: f64) void {
     const periodMicro = std.Io.Duration.fromMicroseconds(@intFromFloat(60000000 / tempo / 4));
     self.periodMicro = periodMicro;
-    std.log.debug("Set tempo {}, periodMicro = {}", .{tempo, periodMicro});
+    std.log.debug("Set tempo {}, periodMicro = {}", .{ tempo, periodMicro });
 }
 
 fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
@@ -123,7 +123,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
                 .dur = durSec,
             }, null);
             if (self.log) |log| {
-                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{bit, sig.instrument, sig.freq, sig.amplitude, duration_bits});
+                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{ bit, sig.instrument, sig.freq, sig.amplitude, duration_bits });
                 try log.flush();
             }
             try tape.append(w);
@@ -135,7 +135,7 @@ fn sleep(self: Self, bit: i64, bit_start: std.Io.Timestamp) !void {
     if (self.periodMicro) |periodMicro| {
         const finish = bit_start.addDuration(periodMicro);
         const dur_ns = self.clock.now(self.io).durationTo(finish);
-        std.log.debug("sleep frame [{}]: {} nano", .{bit, dur_ns.toNanoseconds()});
+        std.log.debug("sleep frame [{}]: {} nano", .{ bit, dur_ns.toNanoseconds() });
         try self.io.sleep(dur_ns, .awake);
     }
 }

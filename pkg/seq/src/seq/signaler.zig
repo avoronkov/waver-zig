@@ -47,14 +47,14 @@ pub fn deinit(self: *Self) void {
 }
 
 pub fn add_func(self: *Self, f: SignalFunc) !void {
-    try self.signal_funcs.append(self.allocator, .{ .func =  f });
+    try self.signal_funcs.append(self.allocator, .{ .func = f });
 }
 
 pub fn add_signaler(self: *Self, name: []const u8) !void {
-    try self.signal_funcs.append(self.allocator, .{ .signaler =  try self.allocator.dupe(u8, name) });
+    try self.signal_funcs.append(self.allocator, .{ .signaler = try self.allocator.dupe(u8, name) });
 }
 
-const SignalsErrors = error{OutOfMemory,emptyList,badValue,badAmplitude,badDuration,badFrequency,badInstrument};
+const SignalsErrors = error{ OutOfMemory, emptyList, badValue, badAmplitude, badDuration, badFrequency, badInstrument };
 
 pub fn signals(self: Self, ctx: *Context) SignalsErrors!?Signals {
     for (self.signal_filters.items) |filt| {
