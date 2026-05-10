@@ -109,10 +109,12 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
         },
         else => {},
     }
-    switch (try eval(a, ctx, func[0])) {
+    const rand_arg = try eval(a, ctx, func[0]);
+    defer value.free_value(a, rand_arg);
+    switch (rand_arg) {
         .list => |lres| {
             const i = rand.random.intRangeLessThan(usize, 0, lres.len);
-            return lres[i];
+            return value.copy_value(a, lres[i]);
         },
         else => return error.badValue,
     }
@@ -195,6 +197,7 @@ fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: [
                     return error.badValue;
                 }
                 var r = try a.alloc(Value, l.len);
+                errdefer value.free_value(a, .{ .list = r });
                 for (0.., l) |i, v| {
                     switch (v) {
                         .float => |f| if (T == f64) { r[i] = .{ .float = first + f }; } else return error.badValue,

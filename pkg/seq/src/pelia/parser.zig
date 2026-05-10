@@ -577,6 +577,7 @@ fn parseAssignment(
                 var inst = Instrument.init(self.allocator, wi);
                 errdefer inst.deinit();
                 try self.parseInstrumentFilters(&inst);
+                try inst.finilize();
                 try self.prog.instruments.put(
                     self.prog.allocator,
                     try self.prog.allocator.dupe(u8, name),
@@ -593,6 +594,7 @@ fn parseAssignment(
             var inst = Instrument.init(self.allocator, wi);
             errdefer inst.deinit();
             try self.parseInstrumentFilters(&inst);
+            try inst.finilize();
             try self.prog.instruments.put(
                 self.prog.allocator,
                 try self.prog.allocator.dupe(u8, name),

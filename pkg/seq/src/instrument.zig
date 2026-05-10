@@ -54,6 +54,31 @@ pub fn add_filter(self: *Self, f: filter.Filter) !void {
     try self.filters.append(self.allocator, f);
 }
 
+pub fn finilize(self: *Self) !void {
+    if (self.isFinite()) {
+        return;
+    }
+
+    const adsr = filter.filters.get("adsr") orelse {
+        std.debug.panic("ADSR filter not found.", .{});
+    };
+    try self.add_filter(adsr);
+}
+
+pub fn isFinite(self: Self) bool {
+    switch (self.wf) {
+        .sample => return true,
+        .waveform => {},
+    }
+    for (self.filters.items) |f| {
+        switch (f) {
+            .adsr => return true,
+            else => {},
+        }
+    }
+    return false;
+}
+
 pub fn value(self: Self, t: f64, note: Note) EofError!f64 {
    const n: i32 = @intCast(self.filters.items.len); 
    return self.value_of(n - 1, t, note);

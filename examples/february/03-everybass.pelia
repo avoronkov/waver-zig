@@ -1,0 +1,98 @@
+### everybass
+
+% tempo 85
+
+%% sample Snare '3/snare'
+- pan:
+    l: 1.0
+    r: 0.8
+%%
+
+%% sample Kick '3/kick'
+- pan:
+    l: 0.8
+    r: 1.0
+%%
+
+% sample Hat '3/hat'
+%% sample Tube '3/08'
+- pan:
+    r: 1.1
+    l: 0.6
+%%
+%% sample Stick '3/19'
+- pan:
+    l: 1.1
+    r: 0.6
+%%
+
+kick == eucl 3 8 +4 Kick
+kick0 == :8 +4 Kick
+snare == eucl' 5 13 Snare _ 3
+hat == bits 0,1,2,3,5 Hat _ 2
+perc == bits 1,2,3,4,5,6 @Hat,Hat,Hat,Tube,Stick _ 2
+
+0..20   hat
+20..52  hat | kick
+52..340 kick | hat | snare
+340..948 snare | kick | perc
+948..948 Kick
+
+%% wave Str 'sine'
+- flanger:
+    freq: 0.1
+%%
+
+chords == :32 +20  Str seq [ min A4 min D5 maj C5 min E5 ] 0.05
+chordsOutro == :32 +20 Str min A4 0.05
+
+84..596 chords
+628..884 chords
+884..949 chordsOutro
+
+%% wave B 'triangle'
+- swingexp:
+    amp: 0.8
+    freq: 0.125
+    inverse: true
+- adsr:
+    releaseLen: 0.5
+    sustainLen: 0.5
+%%
+
+bass1 == :1 B A2 2
+bass2 == :1 B repeat 32 @A2,+0,+0,G2, A2,+0,G2,E2 2
+bass3 == :1 B seq min7 A1 2
+bass31 == :1 B seq A1,+3,+7,+12 2
+bass4 == :1 B seq G1,+4,+7,+12 2
+bass5 == :1 B seq min7 E1 2
+
+212..340 bass1
+340..596 bass2
+
+628..724 bass3
+724..756 bass4
+
+756..788 bass3
+788..820 bass31
+820..852 bass4
+852..884 bass5
+
+%% wave Melody "sine"
+- exp: 3.0
+- am:
+    freq: 16.0
+- adsr:
+- swingpan:
+    freq: 0.2
+    amp: 0.5
+%%
+
+melody == bits 6,8,11,14,16,19,32 +20 Melody @A4,G4,E4,D4,E4,G4 0.2
+melodyOutro == bits 6,8,11,14,16,32 +20 Melody @E4,D4,E4,G4,E4 0.2
+
+596..628 melody
+756..948 melody
+948..980 melodyOutro
+
+% stop 1000

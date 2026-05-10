@@ -13,7 +13,7 @@ tape: Tape,
 beeper: Beeper,
 args: Args,
 
-pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs: std.process.Args, log: *std.Io.Writer) !Self {
+pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs: std.process.Args, log: ?*std.Io.Writer) !Self {
     const args = try Args.init(allocator, pargs);
     errdefer args.deinit();
 
@@ -269,6 +269,21 @@ test "21-adsr.pelia" {
         \\
     ;
     try testExample(input, output);
+}
+
+test "february/01-samples.pelia" {
+    const io = std.testing.io;
+    const clock = std.Io.Clock.real;
+    const allocator = std.testing.allocator;
+
+    const input = &[_][*:0]const u8{ "self", "../../examples/february/01-samples.pelia" };
+    const pargs: std.process.Args = .{ .vector = input };
+
+    var app = try Self.init(allocator, io, clock, pargs, null);
+    defer app.deinit();
+
+    var t = try app.run();
+    t.join();
 }
 
 
