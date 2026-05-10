@@ -261,6 +261,16 @@ test "20-lisp.pelia" {
     try testExample(input, output);
 }
 
+test "21-adsr.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/21-adsr.pelia" };
+    const output =
+        \\[0] 'in' freq=164.81377845643132, amp=0.75, bits=4
+        \\[4] 'in' freq=164.81377845643132, amp=0.75, bits=4
+        \\
+    ;
+    try testExample(input, output);
+}
+
 
 fn testExample(input: []const [*:0]const u8, output: []const u8) !void {
     const io = std.testing.io;
