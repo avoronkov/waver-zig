@@ -55,7 +55,7 @@ pub fn play(self: *Self, wave: anytype) !void {
             const fi: f64 = @floatFromInt(frame);
             const t: f64 = fi / pulse.SAMPLE_RATE;
             for (0..channels) |chan| {
-                const v = wave.value(t) catch {
+                const v = wave.value(t, chan) catch {
                     eof = true;
                     break :L;
                 };

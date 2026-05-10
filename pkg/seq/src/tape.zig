@@ -45,7 +45,7 @@ pub fn append(self: *Self, wave: Inst.Wave) !void {
     self.waves.append(&w.node);
 }
 
-pub fn value(self: *Self, t: f64) EofError!f64 {
+pub fn value(self: *Self, t: f64, channel: usize) EofError!f64 {
     if (self.stopping and self.waves.len() == 0) {
         return error.Eof;
     }
@@ -62,7 +62,7 @@ pub fn value(self: *Self, t: f64) EofError!f64 {
         if (t < start) {
             continue;
         }
-        const w = wave.wave.value(t - start);
+        const w = wave.wave.value(t - start, channel);
         val += w catch blk: {
             wave.wave.deinit();
             self.waves.remove(node);

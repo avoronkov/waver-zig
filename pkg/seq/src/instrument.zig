@@ -110,8 +110,10 @@ pub const Wave = struct {
     note: Note,
     inst: Self,
 
-    pub fn value(self: Wave, t: f64) EofError!f64 {
-        return self.inst.value(t, self.note);
+    pub fn value(self: Wave, t: f64, channel: usize) EofError!f64 {
+        var note = self.note;
+        note.channel = channel;
+        return self.inst.value(t, note);
     }
 
     pub fn deinit(self: *Wave) void {

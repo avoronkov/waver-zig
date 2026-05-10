@@ -249,6 +249,18 @@ test "18-euclidian-last.pelia" {
     try testExample(input, output);
 }
 
+test "19-pan.pelia" {
+    const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/19-pan.pelia" };
+    const output =
+        \\[0] 'l' freq=195.9977179908729, amp=0.75, bits=1
+        \\[2] 'r' freq=195.9977179908729, amp=0.75, bits=1
+        \\[4] 'l' freq=195.9977179908729, amp=0.75, bits=1
+        \\[6] 'r' freq=195.9977179908729, amp=0.75, bits=1
+        \\
+    ;
+    try testExample(input, output);
+}
+
 test "20-lisp.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/20-lisp.pelia" };
     const output =
