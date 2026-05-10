@@ -50,7 +50,7 @@ pub fn play(self: *Self, wave: anytype) !void {
     // std.debug.print("channels={}\n", .{ channels });
     while (!eof) {
         var written: usize = 0;
-        const frames_per_cycle: usize = 120;
+        const frames_per_cycle: usize = buffer.len / 2 / channels;
         L: for (0..frames_per_cycle) |i| {
             const fi: f64 = @floatFromInt(frame);
             const t: f64 = fi / pulse.SAMPLE_RATE;
@@ -64,10 +64,10 @@ pub fn play(self: *Self, wave: anytype) !void {
                 const sb = i * 2 * channels + (chan * 2);
                 const fb = sb + 2;
                 std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
-                written = i * 2 * channels;
 
                 try self.output.append(self.allocator, sv);
             }
+            written = i * 2 * channels;
             frame += 1;
         }
         if (written == 0) {
