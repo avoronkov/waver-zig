@@ -4,12 +4,6 @@ const c = @import("c");
 
 pub const SAMPLE_RATE = 48000;
 
-pub const paSampleSpec: c.pa_sample_spec = .{
-    .format = c.PA_SAMPLE_S16LE,
-    .rate = SAMPLE_RATE,
-    .channels = 1,
-};
-
 pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
     if (ret < 0) {
         std.log.err("failed {s}: {s}\n", .{ msg, c.pa_strerror(err.*) });
@@ -17,9 +11,15 @@ pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
     }
 }
 
-pub fn paSimpleNew() !*c.pa_simple {
+pub fn paSimpleNew(channels: u8) !*c.pa_simple {
+    const spec: c.pa_sample_spec = .{
+        .format = c.PA_SAMPLE_S16LE,
+        .rate = SAMPLE_RATE,
+        .channels = channels,
+    };
+
     var err: c_int = 0;
-    const s = c.pa_simple_new(null, "alxr-pulse", c.PA_STREAM_PLAYBACK, null, "playback", &paSampleSpec, null, null, &err) orelse {
+    const s = c.pa_simple_new(null, "alxr-pulse", c.PA_STREAM_PLAYBACK, null, "playback", &spec, null, null, &err) orelse {
         std.log.err("pa_simple_new failed: {s}\n", .{c.pa_strerror(err)});
         return error.PA;
     };
@@ -33,43 +33,4 @@ pub fn paSimpleDrain(s: *c.pa_simple) !void {
 
 pub fn paSimpleFree(s: *c.pa_simple) void {
     c.pa_simple_free(s);
-}
-
-// wave: { value(t: f64) error{Eof}!f64 }
-pub fn play(pa: *c.pa_simple, io: std.Io, clock: std.Io.Clock, wave: anytype) !void {
-    var eof = false;
-    var buffer: [4800]u8 = undefined;
-    var frame: i64 = 0;
-    var err: c_int = 0;
-    const play_start = clock.now(io).toMicroseconds();
-    while (!eof) {
-        var written: usize = 0;
-        for (0..480 / 2) |i| {
-            const fi: f64 = @floatFromInt(frame);
-            const t: f64 = fi / SAMPLE_RATE;
-            const v = wave.value(t) catch {
-                eof = true;
-                break;
-            };
-            const sv: c_short = @intFromFloat(10000 * v);
-            std.mem.writePackedInt(c_short, buffer[i * 2 .. i * 2 + 2], 0, sv, .little);
-            written = i * 2 + 2;
-            frame += 1;
-        }
-        if (written == 0) {
-            break;
-        }
-
-        try check("pa_simple_write", c.pa_simple_write(pa, &buffer, written, &err), &err);
-
-        const written_ms: i64 = @divTrunc(1000000 * frame, SAMPLE_RATE);
-        const finish = clock.now(io).toMicroseconds();
-        const passed_ms = finish - play_start;
-        const ahead = written_ms - passed_ms;
-        if (ahead > 5000) {
-            const sleep_ns: u64 = @intCast((ahead - 5000) * 1000);
-            try io.sleep(.fromNanoseconds(sleep_ns), .awake);
-        }
-    }
-    std.log.info("Samples written: {}\n", .{frame});
 }

@@ -13,15 +13,18 @@ clock: std.Io.Clock,
 pa_simple: *c.pa_simple,
 output_file: ?[]const u8 = null,
 output: std.ArrayList(i16) = .empty,
+channels: usize,
 
-pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock) !Self {
-    const pa = try pulse.paSimpleNew();
+pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8) !Self {
+    std.log.info("Channels: {}", .{channels});
+    const pa = try pulse.paSimpleNew(channels);
 
     return .{
         .allocator = a,
         .io = io,
         .clock = clock,
         .pa_simple = pa,
+        .channels = @intCast(channels),
     };
 }
 
@@ -43,24 +46,25 @@ pub fn play(self: *Self, wave: anytype) !void {
     var frame: i64 = 0;
     var err: c_int = 0;
     const play_start = self.clock.now(self.io).toMicroseconds();
-    const channels = pulse.paSampleSpec.channels;
+    const channels = self.channels;
+    // std.debug.print("channels={}\n", .{ channels });
     while (!eof) {
         var written: usize = 0;
         const frames_per_cycle: usize = 120;
-        for (0..frames_per_cycle) |i| {
+        L: for (0..frames_per_cycle) |i| {
             const fi: f64 = @floatFromInt(frame);
             const t: f64 = fi / pulse.SAMPLE_RATE;
             for (0..channels) |chan| {
-                // std.debug.print("play t={}, chan={}\n", .{t, chan});
                 const v = wave.value(t) catch {
                     eof = true;
-                    break;
+                    break :L;
                 };
+                // std.debug.print("play t={}, chan={} value={}\n", .{t, chan, v});
                 const sv: c_short = @intFromFloat(10000 * v);
                 const sb = i * 2 * channels + (chan * 2);
                 const fb = sb + 2;
                 std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
-                written = i * 2 + 2;
+                written = i * 2 * channels;
 
                 try self.output.append(self.allocator, sv);
             }
@@ -72,14 +76,11 @@ pub fn play(self: *Self, wave: anytype) !void {
 
         try pulse.check("pa_simple_write", c.pa_simple_write(self.pa_simple, &buffer, written, &err), &err);
 
-        // if (self.output_file) |_| {
-        //     try self.output.appendSlice(self.allocator, buffer[0..written]);
-        // }
-
         const written_ms: i64 = @divTrunc(1000000 * frame, pulse.SAMPLE_RATE);
         const finish = self.clock.now(self.io).toMicroseconds();
         const passed_ms = finish - play_start;
         const ahead = written_ms - passed_ms;
+        // std.debug.print("written samples={}, ms={}, passed_ms={}, ahead={}\n", .{frame, written_ms, passed_ms, ahead});
         if (ahead > 5000) {
             const sleep_ns: u64 = @intCast((ahead - 5000) * 1000);
             try self.io.sleep(.fromNanoseconds(sleep_ns), .awake);
@@ -102,7 +103,7 @@ fn saveWavFile(self: Self) !void {
 
         const data_size = self.output.items.len * @sizeOf(i16);
 
-        var encoder = try wav.encoder(i16, writer, stdout_file_writer, pulse.SAMPLE_RATE, pulse.paSampleSpec.channels, data_size);
+        var encoder = try wav.encoder(i16, writer, stdout_file_writer, pulse.SAMPLE_RATE, self.channels, data_size);
 
         try encoder.write(i16, self.output.items);
         // For some reason finalize does not work correctly with file writer.

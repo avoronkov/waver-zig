@@ -16,7 +16,7 @@ pub fn main(init: std.process.Init) !void {
 
     app.beeper.setTempo(60);
 
-    var play = try player.init(allocator, io, clock);
+    var play = try player.init(allocator, io, clock, app.args.channels);
     defer play.deinit();
 
     if (app.args.dump_wav) {

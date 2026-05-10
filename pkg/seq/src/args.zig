@@ -7,6 +7,7 @@ allocator: Allocator,
 input: ?[]const u8 = null,
 dump_wav: bool = false,
 stop: ?i64 = null,
+channels: u8 = 2,
 
 pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
     var res = Self{
@@ -26,6 +27,10 @@ pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
         }
         if (std.mem.eql(u8, ar, "--dump-wav") or std.mem.eql(u8, ar, "-w")) {
             res.dump_wav = true;
+            continue;
+        }
+        if (std.mem.eql(u8, ar, "--mono") or std.mem.eql(u8, ar, "-m")) {
+            res.channels = 1;
             continue;
         }
 
