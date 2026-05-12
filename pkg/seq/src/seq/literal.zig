@@ -15,8 +15,11 @@ pub const Literal = union(enum) {
     seq,
     plus,
     multiply,
+    divide,
     sin,
+    cos,
     pow,
+    value_of,
 
     pub fn deinit(self: *const Literal, a: Allocator) void {
         switch (self.*) {
@@ -67,8 +70,11 @@ pub fn dumpLiteral(prefix: []const u8, l: Literal) void {
         .seq => debug(".seq ", .{}),
         .plus => debug(".plus ", .{}),
         .multiply => debug(".multiply ", .{}),
+        .divide => debug(".divide ", .{}),
         .sin => debug(".sin ", .{}),
+        .cos => debug(".cos ", .{}),
         .pow => debug(".pow ", .{}),
+        .value_of => debug(".value_of ", .{}),
     }
     if (prefix.len > 0) {
         debug("\n", .{});
@@ -91,8 +97,11 @@ pub fn eql(a: Literal, b: Literal) bool {
         .seq => true,
         .plus => true,
         .multiply => true,
+        .divide => true,
         .sin => true,
+        .cos => true,
         .pow => true,
+        .value_of => true,
     };
 }
 

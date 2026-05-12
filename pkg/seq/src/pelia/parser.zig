@@ -65,8 +65,16 @@ const atoms = [_]struct {
         .atom = .sin,
     },
     .{
+        .token = Lexer.Token{ .ident = "cos" },
+        .atom = .cos,
+    },
+    .{
         .token = Lexer.Token{ .ident = "pow" },
         .atom = .pow,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "value_of" },
+        .atom = .value_of,
     },
 };
 
@@ -393,6 +401,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
                     }
                 } else return error.unexpectedEof;
             },
+            .divide => .divide,
             .underscore => Literal{ .number = 0 },
             else => {
                 std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{ tok, self.lexer.current });

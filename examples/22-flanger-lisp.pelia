@@ -1,0 +1,4 @@
+# max_shift = 0.02
+# freq = 0.099
+fl = sine | [/ 2.0 [+ input [value_of [+ time [/ [- 0.02 [* 0.02 [cos [* 2.0 3.14 time 0.099]]]] 2.0]]]]]
+:16 fl C3

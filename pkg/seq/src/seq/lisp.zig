@@ -49,8 +49,11 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .seq => evalSeq(a, ctx, l[1..]),
         .plus => evalPlus(a, ctx, l[1..]),
         .multiply => evalMultiply(a, ctx, l[1..]),
+        .divide => evalDivide(a, ctx, l[1..]),
         .sin => evalSin(a, ctx, l[1..]),
+        .cos => evalCos(a, ctx, l[1..]),
         .pow => evalPow(a, ctx, l[1..]),
+        .value_of => evalValueOf(a, ctx, l[1..]),
         else => blk: {
             var res: std.ArrayListUnmanaged(Value) = .empty;
             errdefer {
@@ -166,8 +169,11 @@ fn isPureList(l: []const Literal) bool {
         .seq => false,
         .plus => false,
         .multiply => false,
+        .divide => false,
         .sin => false,
+        .cos => false,
         .pow => false,
+        .value_of => false,
     };
 }
 
@@ -181,7 +187,10 @@ fn evalPlus(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
     switch (first) {
         .float => |f| return evalPlusType(f64, a, ctx, f, func[1..]),
         .number => |n| return evalPlusType(i64, a, ctx, n, func[1..]),
-        else => return error.badValue,
+        else => {
+            std.log.err("evalPlus: bad first argument: {any}", .{first});
+            return error.badValue;
+        },
     }
 }
 
@@ -238,6 +247,23 @@ fn evalMultiply(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Va
     return Value{ .float = res };
 }
 
+fn evalDivide(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
+    var res: f64 = 1;
+    for (0.., func) |i, it| {
+        const val = try eval(a, ctx, it);
+        defer value.free_value(a, val);
+        switch (val) {
+            .float => |f| res /= f,
+            else => {
+                std.log.err("Not float result of {any} [{}]: {any}\n", .{ it, i, val });
+                return error.badValue;
+            },
+        }
+    }
+    return Value{ .float = res };
+}
+
+
 fn evalSin(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     if (args.len != 1) {
         return error.badValue;
@@ -247,6 +273,21 @@ fn evalSin(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     return switch (val) {
         .float => |f| .{ .float = std.math.sin(f) },
         else => error.badValue,
+    };
+}
+
+fn evalCos(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
+    if (args.len != 1) {
+        return error.badValue;
+    }
+    const val = try eval(a, ctx, args[0]);
+    defer value.free_value(a, val);
+    return switch (val) {
+        .float => |f| .{ .float = std.math.cos(f) },
+        else => {
+            std.log.err("Non-float arg to cos: {any}", .{val});
+            return error.badValue;
+        },
     };
 }
 
@@ -269,6 +310,41 @@ fn evalPow(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     return .{
         .float = std.math.pow(f64, x.float, y.float),
     };
+}
+
+fn evalValueOf(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
+    if (args.len < 1) {
+        return error.badValue;
+    }
+    if (ctx.chain) |chain| {
+        if (ctx.n_chain) |n| {
+            if (ctx.note) |note| {
+                const t = try eval(a, ctx, args[0]);
+                defer value.free_value(a, t);
+                switch (t) {
+                    .float => |tf| {
+                        // TODO better abstractions.
+                        const v = chain.value_of(n - 1, tf, note) catch 0;
+
+                        return .{ .float = v };
+                    },
+                    else => {
+                        std.log.err("Arg to value_of is not a float: {any}", .{t});
+                        return error.badValue;
+                    }
+                }
+            } else {
+                std.log.err("Context.note is not defined", .{});
+                return error.badValue;
+            }
+        } else {
+            std.log.err("Context.n_chain is not defined", .{});
+            return error.badValue;
+        }
+    } else {
+        std.log.err("Context.chain is not defined", .{});
+        return error.badValue;
+    }
 }
 
 fn valueToLiteral(a: Allocator, val: value.Value) !Literal {

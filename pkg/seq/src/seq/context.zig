@@ -1,6 +1,8 @@
 const std = @import("std");
 const Literal = @import("./literal.zig").Literal;
 const Signaler = @import("../seq/signaler.zig");
+const Chain = @import("../chain.zig");
+const Note = @import("../note.zig");
 
 const Allocator = std.mem.Allocator;
 const SeqCounters = std.ArrayListUnmanaged(usize);
@@ -22,6 +24,10 @@ realBit: i64 = 0,
 
 time: f64 = 0,
 input: f64 = 0,
+
+chain: ?*const Chain = null,
+n_chain: ?i32 = null,
+note: ?Note = null,
 
 // If duration bits are set by filters.
 duration_bits: ?i64 = null,

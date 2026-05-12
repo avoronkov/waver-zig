@@ -114,8 +114,12 @@ pub const LispCode = struct {
         defer ctx.deinit();
         ctx.input = v;
         ctx.time = t;
+        ctx.chain = &chain;
+        ctx.n_chain = n;
+        ctx.note = note;
         const res = lisp.eval(self.allocator, &ctx, self.code) catch |e| {
             std.log.err("Lisp code failure: {t}\n", .{e});
+            std.debug.panic("L: {t}", .{e});
             return error.Eof;
         };
         defer value.free_value(self.allocator, res);
