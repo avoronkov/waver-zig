@@ -47,9 +47,9 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .func => evalFunc(a, ctx, l[1..]),
         .rand => evalRand(a, ctx, l[1..]),
         .seq => evalSeq(a, ctx, l[1..]),
-        .plus => evalPlus(a, ctx, l[1..]),
-        .multiply => evalMultiply(a, ctx, l[1..]),
-        .divide => evalDivide(a, ctx, l[1..]),
+        .plus => evalOp(a, ctx, opPlus, l[1..]),
+        .multiply => evalOp(a, ctx, opMultiply, l[1..]),
+        .divide => evalOp(a, ctx, opDivide, l[1..]),
         .sin => evalSin(a, ctx, l[1..]),
         .cos => evalCos(a, ctx, l[1..]),
         .pow => evalPow(a, ctx, l[1..]),
@@ -168,6 +168,7 @@ fn isPureList(l: []const Literal) bool {
         .rand => false,
         .seq => false,
         .plus => false,
+        .minus => false,
         .multiply => false,
         .divide => false,
         .sin => false,
@@ -177,7 +178,23 @@ fn isPureList(l: []const Literal) bool {
     };
 }
 
-fn evalPlus(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
+fn opPlus(a: anytype, b: anytype) @TypeOf(a) {
+    return a + b;
+}
+
+fn opMultiply(a: anytype, b: anytype) @TypeOf(a) {
+    return a * b;
+}
+
+fn opDivide(a: anytype, b: anytype) @TypeOf(a) {
+    if (comptime @TypeOf(a) == i64) {
+        return @divFloor(a, b);
+    } else {
+        return a / b;
+    }
+}
+
+fn evalOp(a: Allocator, ctx: *Context, comptime op: anytype, func: []const Literal) EvalError!Value {
     if (func.len == 0) {
         return error.emptyList;
     }
@@ -185,26 +202,26 @@ fn evalPlus(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
     const first = try eval(a, ctx, func[0]);
     defer value.free_value(a, first);
     switch (first) {
-        .float => |f| return evalPlusType(f64, a, ctx, f, func[1..]),
-        .number => |n| return evalPlusType(i64, a, ctx, n, func[1..]),
+        .float => |f| return evalOpType(f64, a, ctx, op, f, func[1..]),
+        .number => |n| return evalOpType(i64, a, ctx, op, n, func[1..]),
         else => {
-            std.log.err("evalPlus: bad first argument: {any}", .{first});
+            std.log.err("evalOp: bad first argument: {any}", .{first});
             return error.badValue;
         },
     }
 }
 
-fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: []const Literal) EvalError!Value {
+fn evalOpType(comptime T: type, a: Allocator, ctx: *Context, comptime op: anytype, first: T, args: []const Literal) EvalError!Value {
     var sum = first;
     for (args) |it| {
         const val = try eval(a, ctx, it);
         defer value.free_value(a, val);
         switch (val) {
             .float => |f| if (T == f64) {
-                sum += f;
+                sum = op(sum, f);
             } else return error.badValue,
             .number => |n| if (T == i64) {
-                sum += n;
+                sum = op(sum, n);
             } else return error.badValue,
             .list => |l| {
                 if (args.len != 1) {
@@ -215,10 +232,10 @@ fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: [
                 for (0.., l) |i, v| {
                     switch (v) {
                         .float => |f| if (T == f64) {
-                            r[i] = .{ .float = first + f };
+                            r[i] = .{ .float = op(first, f) };
                         } else return error.badValue,
                         .number => |n| if (T == i64) {
-                            r[i] = .{ .number = first + n };
+                            r[i] = .{ .number = op(first, n) };
                         } else return error.badValue,
                         else => return error.badValue,
                     }
@@ -230,39 +247,6 @@ fn evalPlusType(comptime T: type, a: Allocator, ctx: *Context, first: T, args: [
     }
     return if (T == f64) .{ .float = sum } else .{ .number = sum };
 }
-
-fn evalMultiply(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
-    var res: f64 = 1;
-    for (0.., func) |i, it| {
-        const val = try eval(a, ctx, it);
-        defer value.free_value(a, val);
-        switch (val) {
-            .float => |f| res *= f,
-            else => {
-                std.log.err("Not float result of {any} [{}]: {any}\n", .{ it, i, val });
-                return error.badValue;
-            },
-        }
-    }
-    return Value{ .float = res };
-}
-
-fn evalDivide(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
-    var res: f64 = 1;
-    for (0.., func) |i, it| {
-        const val = try eval(a, ctx, it);
-        defer value.free_value(a, val);
-        switch (val) {
-            .float => |f| res /= f,
-            else => {
-                std.log.err("Not float result of {any} [{}]: {any}\n", .{ it, i, val });
-                return error.badValue;
-            },
-        }
-    }
-    return Value{ .float = res };
-}
-
 
 fn evalSin(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     if (args.len != 1) {

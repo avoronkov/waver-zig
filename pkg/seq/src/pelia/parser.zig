@@ -392,15 +392,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
             .left_square_bracket => try self.parseBracketsList(),
             .plus => .plus,
             .multiply => .multiply,
-            .minus => blk: {
-                if (self.lexer.pop()) |t2| {
-                    switch (t2) {
-                        .float => |f| break :blk Literal{ .float = -f },
-                        .number => |n| break :blk Literal{ .number = -n },
-                        else => return error.unexpectedToken,
-                    }
-                } else return error.unexpectedEof;
-            },
+            .minus => .minus,
             .divide => .divide,
             .underscore => Literal{ .number = 0 },
             else => {
