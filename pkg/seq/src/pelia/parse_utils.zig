@@ -8,15 +8,17 @@ fn ScanResult(comptime T: type) type {
 }
 
 pub fn scan_int(comptime T: type, s: []const u8) ?ScanResult(T) {
+    var negative = false;
     const n = for (0.., s) |i, c| {
         if (i == 0 and c == '-') {
+            negative = true;
             continue;
         }
         if (c < '0' or c > '9') {
             break i;
         }
     } else s.len;
-    if (n == 0) {
+    if ((n == 0) or (negative and n == 1)) {
         return null;
     }
     const value = std.fmt.parseInt(T, s[0..n], 10) catch |e| std.debug.panic("parseInt('{s}') failed: {t}\n", .{ s[0..n], e });

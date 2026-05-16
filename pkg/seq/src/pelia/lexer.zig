@@ -152,15 +152,6 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
 
     LOOP: while (i < content.len) {
         i = skip_whitespaces(content, i);
-        // parse literal tokens
-        for (literalTokens) |lt| {
-            if (has_prefix(content[i..], lt.l)) {
-                try list.append(a, lt.t);
-                i += lt.l.len;
-                continue :LOOP;
-            }
-        }
-
         // Parse float
         if (parse_utils.scan_float(f64, content[i..])) |res| {
             try list.append(a, Token{ .float = res.value });
@@ -173,6 +164,15 @@ fn parse_tokens(a: Allocator, content: []const u8) ![]Token {
             try list.append(a, Token{ .number = res.value });
             i += res.offset;
             continue :LOOP;
+        }
+
+        // parse literal tokens
+        for (literalTokens) |lt| {
+            if (has_prefix(content[i..], lt.l)) {
+                try list.append(a, lt.t);
+                i += lt.l.len;
+                continue :LOOP;
+            }
         }
 
         // Parse identifiers
@@ -263,6 +263,16 @@ test "parse_strings" {
         .{ .string = "bar-baz" },
         .eof,
     }));
+}
+
+test "parse negative values" {
+    const tokens = try parse_tokens(std.testing.allocator, "2 - -3 -4.0");
+    defer {
+        free_tokens(std.testing.allocator, tokens);
+        std.testing.allocator.free(tokens);
+    }
+
+    try expect(tokensEql(tokens, &[_]Token{ .{ .number = 2 }, .minus, .{ .number = -3 }, .{ .float = -4 }, .eof }));
 }
 
 fn skip_whitespaces(content: []const u8, i: usize) usize {
