@@ -716,6 +716,7 @@ fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
         .exp => |*v| setStructField(v, key, value),
         .pan => |*v| setStructField(v, key, value),
         .flanger => |*v| setStructField(v, key, value),
+        .delay => |*v| setStructField(v, key, value),
         .adsr => |*v| setStructField(v, key, value),
         .code => {},
     };

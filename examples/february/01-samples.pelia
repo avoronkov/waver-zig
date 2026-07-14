@@ -1,7 +1,7 @@
 ### "samples"
 
 % scale edo12
-# % tempo 80
+% tempo 80
 
 Kick = "7/01-kick.wav"
 Ch = "7/15-ride.wav"

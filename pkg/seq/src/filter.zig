@@ -188,6 +188,20 @@ pub const Flanger = struct {
     }
 };
 
+pub const Delay = struct {
+    tempo: f64,
+    int: f64,
+    times: i64,
+    fade: f64,
+
+    pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        _ = self;
+        // TODO
+        const v = try chain.value_of(n - 1, t, note);
+        return v;
+    }
+};
+
 pub const Adsr = struct {
     attackLevel: f64,
     decayLevel: f64,
@@ -229,6 +243,7 @@ pub const Filter = union(enum) {
     exp: Exp,
     pan: Pan,
     flanger: Flanger,
+    delay: Delay,
     adsr: Adsr,
     code: LispCode,
 
@@ -238,6 +253,7 @@ pub const Filter = union(enum) {
             .exp => {},
             .pan => {},
             .flanger => {},
+            .delay => {},
             .adsr => {},
             .code => |*c| c.deinit(),
         }
@@ -249,6 +265,7 @@ pub const Filter = union(enum) {
             .exp => |v| .{ .exp = v },
             .pan => |v| .{ .pan = v },
             .flanger => |v| .{ .flanger = v },
+            .delay => |v| .{ .delay = v },
             .adsr => |v| .{ .adsr = v },
             .code => |v| .{ .code = try v.copy(a) },
         };
@@ -260,6 +277,7 @@ pub const Filter = union(enum) {
             .exp => |v| v.apply(chain, n, t, note),
             .pan => |v| v.apply(chain, n, t, note),
             .flanger => |v| v.apply(chain, n, t, note),
+            .delay => |v| v.apply(chain, n, t, note),
             .adsr => |v| v.apply(chain, n, t, note),
             .code => |v| v.apply(chain, n, t, note),
         };
@@ -271,6 +289,7 @@ pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.
     .{ "exp", Filter{ .exp = Exp{ .value = 1 } } },
     .{ "pan", Filter{ .pan = Pan{ .l = 1, .r = 1 } } },
     .{ "flanger", Filter{ .flanger = Flanger{ .maxShift = 0.02, .freq = 4.0, .abs = false } } },
+    .{ "delay", Filter{ .delay = Delay{ .tempo = 120, .int = 1, .times = 1, .fade = 0.5 } } },
     .{ "adsr", Filter{ .adsr = Adsr{
         .attackLevel = 1,
         .decayLevel = 1,
