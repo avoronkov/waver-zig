@@ -36,6 +36,9 @@ const signalFilterParsers = [_]struct {
 }, .{
     .token = .{ .ident = "eucl" },
     .parse = parseEuclidianFirst,
+}, .{
+    .token = .{ .ident = "eucl'" },
+    .parse = parseEuclidianLast,
 } };
 
 const FuncParser = *const fn (self: *Self) ParseError!Literal;
@@ -237,7 +240,7 @@ fn parseSignalFuncs(self: *Self, s: *Signaler) !bool {
                             .eof => return false,
                             .vertical_bar => return true,
                             else => return {
-                                std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
+                                std.log.err("Unexpected token while parsing end of user signaler: {any}\n", .{tok});
                                 return error.unexpectedToken;
                             },
                         }
@@ -789,6 +792,29 @@ fn parseEuclidianFirst(self: *Self) ParseError!signal_filter.SignalFilter {
         return error.unexpectedEof;
 
     return signal_filter.SignalFilter{ .euclidianFirst = try signal_filter.EuclidianFirst.init(self.allocator, pulses, steps) };
+}
+
+fn parseEuclidianLast(self: *Self) ParseError!signal_filter.SignalFilter {
+    // eucl 3 8
+    self.lexer.drop();
+
+    const pulses: i64 = if (self.lexer.pop()) |arg|
+        switch (arg) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        }
+    else
+        return error.unexpectedEof;
+
+    const steps: i64 = if (self.lexer.pop()) |arg|
+        switch (arg) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        }
+    else
+        return error.unexpectedEof;
+
+    return signal_filter.SignalFilter{ .euclidianLast = try signal_filter.EuclidianLast.init(self.allocator, pulses, steps) };
 }
 
 // Function parsers
