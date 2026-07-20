@@ -194,7 +194,7 @@ pub const Delay = struct {
     times: i64,
     fade: f64,
 
-    pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+    pub fn apply(self: Delay, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
         _ = self;
         // TODO
         const v = try chain.value_of(n - 1, t, note);

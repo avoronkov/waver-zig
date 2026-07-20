@@ -1,7 +1,13 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
+    // hack to build in arm64-termux-proot-fedora.
+    const isAarch64 = b.graph.host.result.cpu.arch.isAARCH64();
+    const target = if (isAarch64) b.resolveTargetQuery(.{
+        .cpu_arch = .aarch64,
+        .os_tag = .linux,
+        .abi = .gnu,
+    }) else b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
     const translate_c = b.addTranslateC(.{
@@ -9,7 +15,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    translate_c.linkSystemLibrary("libpulse-simple", .{});
+    if (isAarch64) {
+        translate_c.addIncludePath(.{ .cwd_relative = "/usr/include" });
+    }
+    const translate_c_mod = translate_c.createModule();
+    if (isAarch64) {
+        translate_c_mod.addLibraryPath(.{ .cwd_relative = "/usr/lib64" });
+    }
+    translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
 
     const mod = b.addModule("waver", .{
         .root_source_file = b.path("src/main.zig"),
@@ -18,7 +31,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{
                 .name = "c",
-                .module = translate_c.createModule(),
+                .module = translate_c_mod,
             },
         },
     });
