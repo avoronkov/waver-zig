@@ -3,6 +3,7 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     // hack to build in arm64-termux-proot-fedora.
     const isAarch64 = b.graph.host.result.cpu.arch.isAARCH64();
+    std.log.info("isAarch64 = {}", .{ isAarch64 });
     const target = if (isAarch64) b.resolveTargetQuery(.{
         .cpu_arch = .aarch64,
         .os_tag = .linux,
@@ -17,12 +18,14 @@ pub fn build(b: *std.Build) void {
     });
     if (isAarch64) {
         translate_c.addIncludePath(.{ .cwd_relative = "/usr/include" });
+    } else {
+        translate_c.linkSystemLibrary("libpulse-simple", .{});
     }
     const translate_c_mod = translate_c.createModule();
     if (isAarch64) {
         translate_c_mod.addLibraryPath(.{ .cwd_relative = "/usr/lib64" });
+        translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
     }
-    translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
 
     const mod = b.addModule("waver", .{
         .root_source_file = b.path("src/main.zig"),
