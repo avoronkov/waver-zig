@@ -17,6 +17,10 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs
     const args = try Args.init(allocator, pargs);
     errdefer args.deinit();
 
+    if (args.help) {
+        return error.helpRequested;
+    }
+
     const input = if (args.input) |input| input else {
         std.log.err("No input file specified.\n", .{});
         return error.noInput;

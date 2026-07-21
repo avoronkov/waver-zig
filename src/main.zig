@@ -11,7 +11,20 @@ pub fn main(init: std.process.Init) !void {
     var stdout_writer: std.Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    var app = try seq.init(allocator, io, clock, init.minimal.args, stdout);
+    var app = seq.init(allocator, io, clock, init.minimal.args, stdout) catch |err| {
+        if (err == error.helpRequested) {
+            std.debug.print(
+                \\waver-zig
+                \\usage:
+                \\ --stop, -s <int> - stop after specified frame
+                \\ --dump-wav, -w   - dump output into wav file
+                \\ --mono, -m       - output audio in mono (legacy)
+                \\ --help, -h       - show this help
+                , .{});
+            return;
+        }
+        return err;
+    };
     defer app.deinit();
 
     app.beeper.setTempo(60);

@@ -11,32 +11,41 @@ pub fn build(b: *std.Build) void {
     }) else b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const with_sound = b.option(bool, "with_sound", "Enable sound output") orelse true;
+    std.log.info("with_sound = {}", .{ with_sound });
+
+    const options = b.addOptions();
+    options.addOption(bool, "WITH_SOUND", with_sound);
+
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/c.h"),
         .target = target,
         .optimize = optimize,
     });
-    if (isAarch64) {
-        translate_c.addIncludePath(.{ .cwd_relative = "/usr/include" });
-    } else {
-        translate_c.linkSystemLibrary("libpulse-simple", .{});
+    if (with_sound) {
+        if (isAarch64) {
+            translate_c.addIncludePath(.{ .cwd_relative = "/usr/include" });
+        } else {
+            translate_c.linkSystemLibrary("libpulse-simple", .{});
+        }
     }
     const translate_c_mod = translate_c.createModule();
-    if (isAarch64) {
-        translate_c_mod.addLibraryPath(.{ .cwd_relative = "/usr/lib64" });
-        translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
+    if (with_sound) {
+        if (isAarch64) {
+            translate_c_mod.addLibraryPath(.{ .cwd_relative = "/usr/lib64" });
+            translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
+        }
     }
 
     const mod = b.addModule("waver", .{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{
+        .imports = if (with_sound) &.{
             .{
                 .name = "c",
                 .module = translate_c_mod,
-            },
-        },
+            }} else &.{},
     });
 
     const exe = b.addExecutable(.{
@@ -57,6 +66,8 @@ pub fn build(b: *std.Build) void {
     }).module("wav");
 
     exe.root_module.addImport("wav", dwav);
+
+    exe.root_module.addImport("config", options.createModule());
 
     b.installArtifact(exe);
 
