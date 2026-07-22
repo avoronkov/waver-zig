@@ -14,8 +14,6 @@ const pulse = if (with_sound) @import("./pulse.zig") else struct {
 
 const Self = @This();
 
-// const c = @import("c");
-
 allocator: std.mem.Allocator,
 io: std.Io,
 clock: std.Io.Clock,
@@ -58,6 +56,23 @@ pub fn play(self: *Self, wave: anytype) !void {
     var frame: i64 = 0;
     const play_start = self.clock.now(self.io).toMicroseconds();
     const channels = self.channels;
+
+    // paplay
+    var child = try std.process.spawn(self.io, .{
+        .argv = &.{"paplay", "--playback"},
+        .stdin = .pipe,
+        .stdout = .inherit,
+        .stderr = .inherit,
+    });
+    var paplay_buffer: [4800]u8 = undefined;
+    var stdin_writer = child.stdin.?.writer(self.io, &paplay_buffer);
+    var paplay_writer = &stdin_writer.interface;
+
+    const data_size = 3600 * pulse.SAMPLE_RATE * self.channels;
+    const encoder = try wav.encoder(i16, paplay_writer, stdin_writer, pulse.SAMPLE_RATE, self.channels, data_size);
+    _ = encoder;
+    try paplay_writer.flush();
+
     while (!eof) {
         var written: usize = 0;
         const frames_per_cycle: usize = buffer.len / 2 / channels;
@@ -86,6 +101,7 @@ pub fn play(self: *Self, wave: anytype) !void {
         if (with_sound) {
             try pulse.paSimpleWrite(self.pa_simple, buffer, written);
         }
+        try paplay_writer.writeAll(buffer[0..written]);
 
         const written_ms: i64 = @divTrunc(1000000 * frame, pulse.SAMPLE_RATE);
         const finish = self.clock.now(self.io).toMicroseconds();
@@ -98,6 +114,12 @@ pub fn play(self: *Self, wave: anytype) !void {
         }
     }
     std.log.info("Samples written: {}\n", .{frame});
+
+    try paplay_writer.flush();
+    child.stdin.?.close(self.io);
+    child.stdin = null;
+
+    _ = try child.wait(self.io);
 
     try self.saveWavFile();
 }
