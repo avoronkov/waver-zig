@@ -19,7 +19,6 @@ output: std.ArrayList(i16) = .empty,
 channels: usize,
 
 pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8) !Self {
-    std.debug.print("config = {any}\n", .{config});
     std.log.info("Channels: {}", .{channels});
     std.log.info("paplay backend: {}", .{with_paplay});
     const pa = try Pulse.init(io, SAMPLE_RATE, channels);

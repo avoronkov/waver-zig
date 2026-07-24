@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
 
     const wf = b.addWriteFiles();
     var cfg_buf: [256]u8 = undefined;
-    const cfg = std.fmt.bufPrint(&cfg_buf, "pub const WITH_PAPLAY = {};\n", .{with_paplay}) catch unreachable;
+    const cfg = std.fmt.bufPrint(&cfg_buf, "pub const WITH_PAPLAY = {};\n", .{with_paplay}) catch std.debug.panic("bufPrint failed", .{});
     const cfg_path = wf.add("cfg.zig", cfg);
     const cfg_mod = b.createModule(.{
         .root_source_file = cfg_path,

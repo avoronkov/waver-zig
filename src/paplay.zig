@@ -8,7 +8,7 @@ pub const PaPtr = ?*i32;
 child: std.process.Child,
 io: std.Io,
 file_writer: ?std.Io.File.Writer,
-buffer: [1024]u8 = undefined,
+buffer: [1024]u8,
 
 pub fn init(io: std.Io, sample_rate: usize, channels: usize) !Self {
     var child = try std.process.spawn(io, .{
@@ -30,6 +30,8 @@ pub fn init(io: std.Io, sample_rate: usize, channels: usize) !Self {
         .child = child,
         .io = io,
         .file_writer = null,
+        // SAFETY: used as a writer buffer.
+        .buffer = undefined,
     };
 }
 

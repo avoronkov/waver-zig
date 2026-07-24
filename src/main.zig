@@ -13,7 +13,7 @@ pub fn main(init: std.process.Init) !void {
 
     var app = seq.init(allocator, io, clock, init.minimal.args, stdout) catch |err| {
         if (err == error.helpRequested) {
-            std.debug.print(
+            stdout.print(
                 \\waver-zig
                 \\usage:
                 \\ --stop, -s <int> - stop after specified frame
