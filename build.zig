@@ -11,12 +11,12 @@ pub fn build(b: *std.Build) void {
     }) else b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const with_sound = b.option(bool, "with_sound", "Enable sound output") orelse true;
-    std.log.info("with_sound = {}", .{ with_sound });
+    const with_paplay = b.option(bool, "with_paplay", "Enable sound output") orelse false;
+    std.log.info("paplay backend = {}", .{ with_paplay });
 
     const wf = b.addWriteFiles();
     var cfg_buf: [256]u8 = undefined;
-    const cfg = std.fmt.bufPrint(&cfg_buf, "pub const WITH_SOUND = {};\n", .{with_sound}) catch unreachable;
+    const cfg = std.fmt.bufPrint(&cfg_buf, "pub const WITH_PAPLAY = {};\n", .{with_paplay}) catch unreachable;
     const cfg_path = wf.add("cfg.zig", cfg);
     const cfg_mod = b.createModule(.{
         .root_source_file = cfg_path,
@@ -27,7 +27,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    if (with_sound) {
+    if (!with_paplay) {
         if (isAarch64) {
             translate_c.addIncludePath(.{ .cwd_relative = "/usr/include" });
         } else {
@@ -35,7 +35,7 @@ pub fn build(b: *std.Build) void {
         }
     }
     const translate_c_mod = translate_c.createModule();
-    if (with_sound) {
+    if (!with_paplay) {
         if (isAarch64) {
             translate_c_mod.addLibraryPath(.{ .cwd_relative = "/usr/lib64" });
             translate_c_mod.linkSystemLibrary("libpulse-simple", .{});
@@ -46,7 +46,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = if (with_sound) &.{
+        .imports = if (!with_paplay) &.{
             .{
                 .name = "c",
                 .module = translate_c_mod,

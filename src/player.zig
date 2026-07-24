@@ -2,11 +2,11 @@ const std = @import("std");
 const wav = @import("wav");
 const config = @import("config");
 
-const with_sound = config.WITH_SOUND;
+const with_paplay = config.WITH_PAPLAY;
 
 pub const SAMPLE_RATE = 48000;
 
-const Pulse = if (with_sound) @import("./pulse.zig") else @import("./paplay.zig");
+const Pulse = if (with_paplay) @import("./paplay.zig") else @import("./pulse.zig");
 
 const Self = @This();
 
@@ -21,7 +21,7 @@ channels: usize,
 pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8) !Self {
     std.debug.print("config = {any}\n", .{config});
     std.log.info("Channels: {}", .{channels});
-    std.log.info("Sound enabled: {}", .{with_sound});
+    std.log.info("paplay backend: {}", .{with_paplay});
     const pa = try Pulse.init(io, SAMPLE_RATE, channels);
 
     return .{
