@@ -6,17 +6,14 @@ const with_sound = config.WITH_SOUND;
 
 pub const SAMPLE_RATE = 48000;
 
-const pulse = if (with_sound) @import("./pulse.zig") else struct {
-    pub const PaPtr = ?*i32;
-    pub const SAMPLE_RATE = 48000;
-};
+const Pulse = if (with_sound) @import("./pulse.zig") else @import("./paplay.zig");
 
 const Self = @This();
 
 allocator: std.mem.Allocator,
 io: std.Io,
 clock: std.Io.Clock,
-pa_simple: pulse.PaPtr,
+pa: Pulse,
 output_file: ?[]const u8 = null,
 output: std.ArrayList(i16) = .empty,
 channels: usize,
@@ -25,24 +22,19 @@ pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8)
     std.debug.print("config = {any}\n", .{config});
     std.log.info("Channels: {}", .{channels});
     std.log.info("Sound enabled: {}", .{with_sound});
-    const pa = if (with_sound) try pulse.paSimpleNew(channels) else null;
+    const pa = try Pulse.init(io, SAMPLE_RATE, channels);
 
     return .{
         .allocator = a,
         .io = io,
         .clock = clock,
-        .pa_simple = pa,
+        .pa = pa,
         .channels = @intCast(channels),
     };
 }
 
 pub fn deinit(self: *Self) void {
-    if (with_sound) {
-        pulse.paSimpleDrain(self.pa_simple) catch |err| {
-            std.log.err("paSimpleDrain failed: {t}", .{err});
-        };
-        pulse.paSimpleFree(self.pa_simple);
-    }
+    self.pa.deinit();
     if (self.output_file) |of| {
         self.allocator.free(of);
     }
@@ -57,29 +49,12 @@ pub fn play(self: *Self, wave: anytype) !void {
     const play_start = self.clock.now(self.io).toMicroseconds();
     const channels = self.channels;
 
-    // paplay
-
-    var child = try std.process.spawn(self.io, .{
-        .argv = &.{"paplay", "--playback", "--latency-msec=100"},
-        .stdin = .pipe,
-        .stdout = .inherit,
-        .stderr = .inherit,
-    });
-    var paplay_buffer: [4800]u8 = undefined;
-    var stdin_writer = child.stdin.?.writer(self.io, &paplay_buffer);
-    var paplay_writer = &stdin_writer.interface;
-
-    const data_size = 3600 * pulse.SAMPLE_RATE * self.channels;
-    const encoder = try wav.encoder(i16, paplay_writer, stdin_writer, pulse.SAMPLE_RATE, self.channels, data_size);
-    _ = encoder;
-    try paplay_writer.flush();
-
     while (!eof) {
         var written: usize = 0;
         const frames_per_cycle: usize = buffer.len / 2 / channels;
         L: for (0..frames_per_cycle) |i| {
             const fi: f64 = @floatFromInt(frame);
-            const t: f64 = fi / pulse.SAMPLE_RATE;
+            const t: f64 = fi / SAMPLE_RATE;
             for (0..channels) |chan| {
                 const v = wave.value(t, chan) catch {
                     eof = true;
@@ -99,12 +74,9 @@ pub fn play(self: *Self, wave: anytype) !void {
             break;
         }
 
-        if (with_sound) {
-            try pulse.paSimpleWrite(self.pa_simple, buffer, written);
-        }
-        try paplay_writer.writeAll(buffer[0..written]);
+        try self.pa.write(buffer[0..written]);
 
-        const written_ms: i64 = @divTrunc(1000000 * frame, pulse.SAMPLE_RATE);
+        const written_ms: i64 = @divTrunc(1000000 * frame, SAMPLE_RATE);
         const finish = self.clock.now(self.io).toMicroseconds();
         const passed_ms = finish - play_start;
         const ahead = written_ms - passed_ms;
@@ -115,12 +87,6 @@ pub fn play(self: *Self, wave: anytype) !void {
         }
     }
     std.log.info("Samples written: {}\n", .{frame});
-
-    try paplay_writer.flush();
-    child.stdin.?.close(self.io);
-    child.stdin = null;
-
-    _ = try child.wait(self.io);
 
     try self.saveWavFile();
 }
@@ -137,7 +103,7 @@ fn saveWavFile(self: Self) !void {
 
         const data_size = self.output.items.len * @sizeOf(i16);
 
-        var encoder = try wav.encoder(i16, writer, stdout_file_writer, pulse.SAMPLE_RATE, self.channels, data_size);
+        var encoder = try wav.encoder(i16, writer, stdout_file_writer, SAMPLE_RATE, self.channels, data_size);
 
         try encoder.write(i16, self.output.items);
         // For some reason finalize does not work correctly with file writer.

@@ -1,22 +1,42 @@
 const std = @import("std");
 
-const c = @import("c");
+const Self = @This();
 
-pub const SAMPLE_RATE = 48000;
+const c = @import("c");
 
 pub const PaPtr = *c.pa_simple;
 
-pub fn check(msg: []const u8, ret: i32, err: *c_int) !void {
+pa: PaPtr,
+
+pub fn init(io: std.Io, sample_rate: usize, channels: u8) !Self {
+    _ = io;
+    return .{
+        .pa = try paSimpleNew(sample_rate, channels),
+    };
+}
+
+pub fn write(self: *Self, data: []u8) !void {
+    try paSimpleWrite(self.pa, data);
+}
+
+pub fn deinit(self: *Self) void {
+    paSimpleDrain(self.pa) catch |err| {
+        std.log.err("paSimpleDrain failed: {t}", .{err});
+    };
+    paSimpleFree(self.pa);
+}
+
+fn check(msg: []const u8, ret: i32, err: *c_int) !void {
     if (ret < 0) {
         std.log.err("failed {s}: {s}\n", .{ msg, c.pa_strerror(err.*) });
         return error.PA;
     }
 }
 
-pub fn paSimpleNew(channels: u8) !PaPtr {
+fn paSimpleNew(sample_rate: usize, channels: u8) !PaPtr {
     const spec: c.pa_sample_spec = .{
         .format = c.PA_SAMPLE_S16LE,
-        .rate = SAMPLE_RATE,
+        .rate = @intCast(sample_rate),
         .channels = channels,
     };
 
@@ -28,16 +48,16 @@ pub fn paSimpleNew(channels: u8) !PaPtr {
     return s;
 }
 
-pub inline fn paSimpleWrite(s: PaPtr, buffer: [4800]u8, written: usize) !void {
+inline fn paSimpleWrite(s: PaPtr, buffer: []u8) !void {
     var err: c_int = 0;
-    try check("pa_simple_write", c.pa_simple_write(s, &buffer, written, &err), &err);
+    try check("pa_simple_write", c.pa_simple_write(s, buffer.ptr, buffer.len, &err), &err);
 }
 
-pub fn paSimpleDrain(s: PaPtr) !void {
+fn paSimpleDrain(s: PaPtr) !void {
     var err: c_int = 0;
     try check("pa_simple_drain", c.pa_simple_drain(s, &err), &err);
 }
 
-pub fn paSimpleFree(s: PaPtr) void {
+fn paSimpleFree(s: PaPtr) void {
     c.pa_simple_free(s);
 }

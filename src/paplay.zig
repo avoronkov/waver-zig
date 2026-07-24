@@ -7,6 +7,8 @@ pub const PaPtr = ?*i32;
 
 child: std.process.Child,
 io: std.Io,
+file_writer: ?std.Io.File.Writer,
+buffer: [1024]u8 = undefined,
 
 pub fn init(io: std.Io, sample_rate: usize, channels: usize) !Self {
     var child = try std.process.spawn(io, .{
@@ -15,27 +17,30 @@ pub fn init(io: std.Io, sample_rate: usize, channels: usize) !Self {
         .stdout = .inherit,
         .stderr = .inherit,
     });
-    var paplay_buffer: [4800]u8 = undefined;
-    var stdin_writer = child.stdin.?.writer(io, &paplay_buffer);
-    var paplay_writer = &stdin_writer.interface;
+    var buffer: [1024]u8 = undefined;
+    var file_writer = child.stdin.?.writer(io, &buffer);
+    var paplay_writer = &file_writer.interface;
 
     const data_size = 3600 * sample_rate * channels;
-    const encoder = try wav.encoder(i16, paplay_writer, stdin_writer, sample_rate, channels, data_size);
+    const encoder = try wav.encoder(i16, paplay_writer, file_writer, sample_rate, channels, data_size);
     _ = encoder;
     try paplay_writer.flush();
     
     return .{
         .child = child,
         .io = io,
+        .file_writer = null,
     };
 }
 
 pub fn write(self: *Self, data: []u8) !void {
-    var paplay_buffer: [4800]u8 = undefined;
-    var stdin_writer = self.child.stdin.?.writer(self.io, &paplay_buffer);
-    var paplay_writer = &stdin_writer.interface;
-
-    try paplay_writer.writeAll(data);
+    var writer = blk: { if (self.file_writer) |*writer| {
+        break :blk writer;
+    } else {
+        self.file_writer = self.child.stdin.?.writer(self.io, &self.buffer);
+        break :blk &self.file_writer.?;
+    }};
+    try writer.interface.writeAll(data);
 }
 
 pub fn deinit(self: *Self) void {
