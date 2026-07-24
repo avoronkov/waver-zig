@@ -14,8 +14,13 @@ pub fn build(b: *std.Build) void {
     const with_sound = b.option(bool, "with_sound", "Enable sound output") orelse true;
     std.log.info("with_sound = {}", .{ with_sound });
 
-    const options = b.addOptions();
-    options.addOption(bool, "WITH_SOUND", with_sound);
+    const wf = b.addWriteFiles();
+    var cfg_buf: [256]u8 = undefined;
+    const cfg = std.fmt.bufPrint(&cfg_buf, "pub const WITH_SOUND = {};\n", .{with_sound}) catch unreachable;
+    const cfg_path = wf.add("cfg.zig", cfg);
+    const cfg_mod = b.createModule(.{
+        .root_source_file = cfg_path,
+    });
 
     const translate_c = b.addTranslateC(.{
         .root_source_file = b.path("src/c.h"),
@@ -67,7 +72,7 @@ pub fn build(b: *std.Build) void {
 
     exe.root_module.addImport("wav", dwav);
 
-    exe.root_module.addImport("config", options.createModule());
+    exe.root_module.addImport("config", cfg_mod);
 
     b.installArtifact(exe);
 

@@ -2,10 +2,7 @@ const std = @import("std");
 const wav = @import("wav");
 const config = @import("config");
 
-const with_sound = if (@hasDecl(config, "WITH_SOUND"))
-    config.WITH_SOUND
-else
-    true;
+const with_sound = config.WITH_SOUND;
 
 const pulse = if (with_sound) @import("./pulse.zig") else struct {
     pub const PaPtr = ?*i32;
@@ -23,6 +20,7 @@ output: std.ArrayList(i16) = .empty,
 channels: usize,
 
 pub fn init(a: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, channels: u8) !Self {
+    std.debug.print("config = {any}\n", .{config});
     std.log.info("Channels: {}", .{channels});
     std.log.info("Sound enabled: {}", .{with_sound});
     const pa = if (with_sound) try pulse.paSimpleNew(channels) else null;
@@ -59,7 +57,7 @@ pub fn play(self: *Self, wave: anytype) !void {
 
     // paplay
     var child = try std.process.spawn(self.io, .{
-        .argv = &.{"paplay", "--playback"},
+        .argv = &.{"paplay", "--playback", "--latency-msec=100"},
         .stdin = .pipe,
         .stdout = .inherit,
         .stderr = .inherit,
