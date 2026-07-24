@@ -4,6 +4,8 @@ const config = @import("config");
 
 const with_sound = config.WITH_SOUND;
 
+pub const SAMPLE_RATE = 48000;
+
 const pulse = if (with_sound) @import("./pulse.zig") else struct {
     pub const PaPtr = ?*i32;
     pub const SAMPLE_RATE = 48000;
@@ -56,6 +58,7 @@ pub fn play(self: *Self, wave: anytype) !void {
     const channels = self.channels;
 
     // paplay
+
     var child = try std.process.spawn(self.io, .{
         .argv = &.{"paplay", "--playback", "--latency-msec=100"},
         .stdin = .pipe,
