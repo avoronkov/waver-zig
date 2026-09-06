@@ -198,9 +198,36 @@ pub const Delay = struct {
     fade: f64,
 
     pub fn apply(self: Delay, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        _ = self;
-        // TODO
-        const v = try chain.value_of(n - 1, t, note);
+	const interval = self.int * 120.0 / self.tempo;
+        const val0 = chain.value_of(n - 1, t, note);
+        var v: f64 = val0 catch 0;
+        var has = false;
+        if (val0 == error.Eof) {
+            v = 0;
+            const ftimes1: f64 = @floatFromInt(self.times+1);
+            if (t < ftimes1 * interval) {
+                has = true;
+            }
+        } else {
+            has = true;
+        }
+        var multiplier: f64 = 1;
+        var t1 = t;
+        for (0..@intCast(self.times)) |_| {
+	    t1 -= interval;
+            multiplier *= self.fade;
+            if (t1 < 0) {
+                break;
+            }
+            const v1: f64 = chain.value_of(n - 1, t1, note) catch {
+                continue;
+            };
+            v += v1 * multiplier;
+            has = true;
+        }
+        if (!has) {
+            return error.Eof;
+        }
         return v;
     }
 };

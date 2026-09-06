@@ -1,0 +1,3 @@
+HatL = "2/09-hat.wav" | pan r=0.5 | delay int=0.25 fade=0.75 times=3
+
+:8 HatL
