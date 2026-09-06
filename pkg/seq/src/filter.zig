@@ -181,10 +181,13 @@ pub const Flanger = struct {
     abs: bool,
 
     pub fn apply(self: Flanger, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
-        _ = self;
-        // TODO
+        // TODO abs flanger
         const v = try chain.value_of(n - 1, t, note);
-        return v;
+        const x = 2 * std.math.pi * t * self.freq;
+        const shift = std.math.cos(x) * self.maxShift;
+        const t1 = t - 0.5*shift + 0.5*self.maxShift;
+        const v1 = try chain.value_of(n - 1, t1, note);
+        return 0.5 * v + 0.5 * v1;
     }
 };
 
