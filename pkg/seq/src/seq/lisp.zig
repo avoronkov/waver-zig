@@ -107,7 +107,7 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
     switch (func[0]) {
         .list => |l| {
             if (isPureList(l)) {
-                const i = rand.random.intRangeLessThan(usize, 0, l.len);
+                const i: usize = @intCast(rand.random.int31n(@intCast(l.len)));
                 return try eval(a, ctx, l[i]);
             }
         },
@@ -117,7 +117,7 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
     defer value.free_value(a, rand_arg);
     switch (rand_arg) {
         .list => |lres| {
-            const i = rand.random.intRangeLessThan(usize, 0, lres.len);
+            const i: usize = @intCast(rand.random.int31n(@intCast(lres.len)));
             return value.copy_value(a, lres[i]);
         },
         else => return error.badValue,

@@ -30,7 +30,7 @@ pub fn main(init: std.process.Init) !void {
     };
     defer app.deinit();
 
-    app.beeper.setTempo(60);
+    app.beeper.setTempo(120);
 
     var play = try player.init(allocator, io, clock, app.args.channels);
     defer play.deinit();
