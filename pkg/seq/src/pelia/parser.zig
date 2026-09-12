@@ -671,7 +671,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
 fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
     while (self.lexer.top()) |tok| {
         if (tok == .eol or tok == .eof or tok == .vertical_bar) {
-            return;
+            break;
         }
         self.lexer.drop();
 
@@ -711,6 +711,10 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
             },
         };
     }
+    if (self.prog.tempo) |tempo| {
+        // A little hack to set tempo for Delay.
+        setFilterParam(flt, "tempo", tempo) catch {};
+    }
 }
 
 fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
@@ -720,6 +724,7 @@ fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
         .pan => |*v| setStructField(v, key, value),
         .flanger => |*v| setStructField(v, key, value),
         .delay => |*v| setStructField(v, key, value),
+        .swingpan => |*v| setStructField(v, key, value),
         .adsr => |*v| setStructField(v, key, value),
         .code => {},
     };

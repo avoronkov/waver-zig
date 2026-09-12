@@ -268,6 +268,22 @@ pub const Adsr = struct {
     }
 };
 
+pub const SwingPan = struct {
+    freq: f64,
+    amp: f64,
+    pub fn apply(self: SwingPan, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        const x = 2 * std.math.pi * t * self.freq;
+        const pan = std.math.sin(x) * self.amp;
+        const v = try chain.value_of(n - 1, t, note);
+        const r: f64 = (pan + 1) / 2;
+        const l: f64 = 1.0 - r;
+        if (note.channel == 0){
+            return v * l;
+        }
+        return v * r;
+    }
+};
+
 pub const Filter = union(enum) {
     am: Am,
     exp: Exp,
@@ -275,6 +291,7 @@ pub const Filter = union(enum) {
     flanger: Flanger,
     delay: Delay,
     adsr: Adsr,
+    swingpan: SwingPan,
     code: LispCode,
 
     pub fn deinit(f: *Filter) void {
@@ -285,6 +302,7 @@ pub const Filter = union(enum) {
             .flanger => {},
             .delay => {},
             .adsr => {},
+            .swingpan => {},
             .code => |*c| c.deinit(),
         }
     }
@@ -297,6 +315,7 @@ pub const Filter = union(enum) {
             .flanger => |v| .{ .flanger = v },
             .delay => |v| .{ .delay = v },
             .adsr => |v| .{ .adsr = v },
+            .swingpan => |v| .{ .swingpan = v },
             .code => |v| .{ .code = try v.copy(a) },
         };
     }
@@ -309,6 +328,7 @@ pub const Filter = union(enum) {
             .flanger => |v| v.apply(chain, n, t, note),
             .delay => |v| v.apply(chain, n, t, note),
             .adsr => |v| v.apply(chain, n, t, note),
+            .swingpan => |v| v.apply(chain, n, t, note),
             .code => |v| v.apply(chain, n, t, note),
         };
     }
@@ -320,6 +340,7 @@ pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.
     .{ "pan", Filter{ .pan = Pan{ .l = 1, .r = 1 } } },
     .{ "flanger", Filter{ .flanger = Flanger{ .maxShift = 0.02, .freq = 4.0, .abs = false } } },
     .{ "delay", Filter{ .delay = Delay{ .tempo = 120, .int = 1, .times = 1, .fade = 0.5 } } },
+    .{ "swingpan", Filter{ .swingpan = SwingPan{ .freq = 0.5, .amp = 1.0 } } },
     .{ "adsr", Filter{ .adsr = Adsr{
         .attackLevel = 1,
         .decayLevel = 1,

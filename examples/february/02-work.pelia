@@ -34,4 +34,4 @@ melody2 == eucl 5 14 +8 Str &[C5 C4 D4 E4 D5  E5 F5 G5 A5 C6 D6 F6 G6 F6 A6 C7 ]
 288..960  melody1
 960..1760 melody2
 
-# % stop 1780
+% stop 1780
