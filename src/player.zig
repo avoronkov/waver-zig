@@ -64,7 +64,9 @@ pub fn play(self: *Self, wave: anytype) !void {
                 const fb = sb + 2;
                 std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
 
-                try self.output.append(self.allocator, sv);
+                if (self.output_file != null) {
+                    try self.output.append(self.allocator, sv);
+                }
             }
             written = i * 2 * channels;
             frame += 1;
