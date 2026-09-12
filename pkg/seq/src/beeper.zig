@@ -63,7 +63,13 @@ pub fn run(self: *Self, tape: *Tape) !void {
     }
 
     if (self.program.stop) |stop| {
-        self.stop = stop;
+        if (self.stop == null) {
+            self.stop = stop;
+        }
+    }
+
+    if (self.stop) |stop| {
+        std.log.info("Stop = {}", .{stop});
     }
 
     var bit: i64 = 0;
@@ -75,7 +81,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
                 break;
             }
         }
-        std.log.info("Bit {}", .{bit});
+        std.log.debug("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
             self.handle_signaler(s, bit, tape) catch |err| {
                 std.log.err("Error: {t}", .{err});
