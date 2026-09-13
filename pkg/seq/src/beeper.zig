@@ -12,8 +12,9 @@ const Allocator = std.mem.Allocator;
 allocator: Allocator,
 io: std.Io,
 clock: std.Io.Clock,
-startMicro: i64,
+// startMicro: i64,
 periodMicro: ?std.Io.Duration,
+zeroBitTime: std.Io.Timestamp,
 context: Context,
 program: Program,
 file: []const u8,
@@ -37,8 +38,9 @@ pub fn init(
         .allocator = allocator,
         .io = io,
         .clock = clock,
-        .startMicro = @truncate(clock.now(io).toMicroseconds()),
+        // .startMicro = @truncate(clock.now(io).toMicroseconds()),
         .periodMicro = null,
+        .zeroBitTime = clock.now(io),
         .context = context,
         .program = prog,
         .file = file,
@@ -59,7 +61,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
 
     if (self.program.tempo) |tempo| {
         std.log.info("Tempo = {}", .{tempo});
-        self.setTempo(tempo);
+        self.setTempo(tempo, 0);
     }
 
     if (self.program.stop) |stop| {
@@ -73,6 +75,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
     }
 
     var bit: i64 = 0;
+    var bit_time_sec: f64 = 0.05;
     while (true) {
         const bit_start = self.clock.now(self.io);
         if (self.stop) |stop| {
@@ -83,26 +86,37 @@ pub fn run(self: *Self, tape: *Tape) !void {
         }
         std.log.debug("Bit {}", .{bit});
         for (self.program.signalers.items) |s| {
-            self.handle_signaler(s, bit, tape) catch |err| {
+            self.handle_signaler(s, bit, bit_time_sec, tape) catch |err| {
                 std.log.err("Error: {t}", .{err});
             };
         }
-        bit += 1;
-        self.check_file_modified() catch |err| {
+        self.check_file_modified(bit) catch |err| {
             std.log.err("Error checking file update '{s}': {t}", .{ self.file, err });
         };
+        bit += 1;
+        if (self.periodMicro) |period| {
+            const period_micro: f64 = @floatFromInt(period.toMicroseconds());
+            bit_time_sec += (period_micro / 1000000);
+        }
         try self.sleep(bit, bit_start);
     }
     tape.stop();
 }
 
-pub fn setTempo(self: *Self, tempo: f64) void {
-    const periodMicro = std.Io.Duration.fromMicroseconds(@intFromFloat(60000000 / tempo / 4));
-    self.periodMicro = periodMicro;
-    std.log.debug("Set tempo {}, periodMicro = {}", .{ tempo, periodMicro });
+pub fn setTempo(self: *Self, tempo: f64, bit: i64) void {
+    const periodMicro: i64 = @intFromFloat(60000000 / tempo / 4);
+    self.periodMicro = std.Io.Duration.fromMicroseconds(periodMicro);
+    const now = self.clock.now(self.io);
+    self.zeroBitTime = now.subDuration(std.Io.Duration.fromMicroseconds(periodMicro * bit));
+    // TODO do not change zeroBitTime if tempo did not change.
+    std.log.info("Set tempo {}, periodMicro = {}", .{ tempo, periodMicro });
 }
 
-fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
+fn bitTime(self: *Self, bit: i64) std.Io.Timestamp {
+    return self.zeroBitTime.addDuration(std.io.Duration.fromMicroseconds(self.periodMicro.toMicroseconds() * bit + 20000));
+}
+
+fn handle_signaler(self: *Self, s: Signaler, bit: i64, bit_time_sec: f64, tape: *Tape) !void {
     self.context.bit = bit;
     self.context.realBit = bit;
     self.context.duration_bits = null;
@@ -127,7 +141,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, tape: *Tape) !void {
                 .freq = sig.freq,
                 .amp = sig.amplitude,
                 .dur = durSec,
-            }, null);
+            }, bit_time_sec);
             if (self.log) |log| {
                 try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{ bit, sig.instrument, sig.freq, sig.amplitude, duration_bits });
                 try log.flush();
@@ -146,7 +160,7 @@ fn sleep(self: Self, bit: i64, bit_start: std.Io.Timestamp) !void {
     }
 }
 
-fn check_file_modified(self: *Self) !void {
+fn check_file_modified(self: *Self, bit: i64) !void {
     if (self.program.mtime) |prog_mtime| {
         const stat = try std.Io.Dir.cwd().statFile(self.io, self.file, .{});
         if (stat.mtime.toNanoseconds() <= prog_mtime.toNanoseconds()) {
@@ -165,7 +179,7 @@ fn check_file_modified(self: *Self) !void {
         self.context.scaleFrequencies = self.program.scaleFrequencies;
         if (self.program.tempo) |tempo| {
             std.log.info("Tempo = {}", .{tempo});
-            self.setTempo(tempo);
+            self.setTempo(tempo, bit);
         }
         if (self.program.stop) |stop| {
             self.stop = stop;

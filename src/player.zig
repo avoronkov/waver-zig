@@ -40,6 +40,10 @@ pub fn deinit(self: *Self) void {
     self.output.deinit(self.allocator);
 }
 
+const max_int16_amp = (1 << 15) - 1;
+
+const max_ahead_ms = 10000;
+
 // wave: { value(t: f64, channel: usize) error{Eof}!f64 }
 pub fn play(self: *Self, wave: anytype) !void {
     var eof = false;
@@ -59,7 +63,7 @@ pub fn play(self: *Self, wave: anytype) !void {
                     eof = true;
                     break :L;
                 };
-                const sv: c_short = @intFromFloat(10000 * v);
+                const sv: c_short = @intFromFloat(max_int16_amp * v);
                 const sb = i * 2 * channels + (chan * 2);
                 const fb = sb + 2;
                 std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
@@ -82,8 +86,8 @@ pub fn play(self: *Self, wave: anytype) !void {
         const passed_ms = finish - play_start;
         const ahead = written_ms - passed_ms;
         // std.debug.print("written samples={}, ms={}, passed_ms={}, ahead={}\n", .{frame, written_ms, passed_ms, ahead});
-        if (ahead > 5000) {
-            const sleep_ns: u64 = @intCast((ahead - 5000) * 1000);
+        if (ahead > max_ahead_ms) {
+            const sleep_ns: u64 = @intCast((ahead - max_ahead_ms) * 1000);
             try self.io.sleep(.fromNanoseconds(sleep_ns), .awake);
         }
     }
