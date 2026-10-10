@@ -8,6 +8,7 @@ input: ?[]const u8 = null,
 dump_wav: bool = false,
 stop: ?i64 = null,
 channels: u8 = 2,
+sample_rate: i64 = 44100,
 verbose: bool = false,
 help: bool = false,
 
@@ -33,6 +34,20 @@ pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
         }
         if (std.mem.eql(u8, ar, "--mono") or std.mem.eql(u8, ar, "-m")) {
             res.channels = 1;
+            continue;
+        }
+        if (std.mem.eql(u8, ar, "--sample-rate") or std.mem.eql(u8, ar, "-S")) {
+            if (args.next()) |ar2| {
+                const sample_rate = try std.fmt.parseInt(i64, ar2, 10);
+                if (sample_rate != 44100 and sample_rate != 48000)
+                {
+                    std.log.err("Bad sample rate: {}. Only 44100 and 48000 are supported", .{sample_rate});
+                    return error.badArg;
+                }
+                res.sample_rate = sample_rate;
+            } else {
+                return error.badArg;
+            }
             continue;
         }
         if (std.mem.eql(u8, ar, "--verbose") or std.mem.eql(u8, ar, "-V")) {

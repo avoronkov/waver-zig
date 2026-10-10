@@ -16,11 +16,13 @@ pub fn main(init: std.process.Init) !void {
             try stdout.print(
                 \\waver-zig
                 \\usage:
-                \\ --stop, -s <int> - stop after specified frame
-                \\ --dump-wav, -w   - dump output into wav file
-                \\ --mono, -m       - output audio in mono (legacy)
-                \\ --verbose, -V    - verbose output
-                \\ --help, -h       - show this help
+                \\ --stop, -s <int>      - stop after specified frame
+                \\ --dump-wav, -w        - dump output into wav file
+                \\ --mono, -m            - output audio in mono (legacy)
+                \\ --sample-rate,
+                \\     -S [44100|48000]  - sample rate
+                \\ --verbose, -V         - verbose output
+                \\ --help, -h            - show this help
                 \\
                 , .{});
             try stdout.flush(); // Don't forget to flush!
@@ -32,7 +34,7 @@ pub fn main(init: std.process.Init) !void {
 
     app.beeper.setTempo(120, 0);
 
-    var play = try player.init(allocator, io, clock, app.args.channels);
+    var play = try player.init(allocator, io, clock, app.args.channels, app.args.sample_rate);
     defer play.deinit();
 
     if (app.args.dump_wav) {
