@@ -76,10 +76,10 @@ pub fn play(self: *Self, wave: anytype) !void {
                 };
 
                 if (v > 1.0) {
-                    std.log.warn("Signal overflow: {}", .{v});
+                    // std.log.warn("Signal overflow: {}", .{v});
                     v = 1.0;
                 } else if (v < -1.0) {
-                    std.log.warn("Signal underflow: {}", .{v});
+                    // std.log.warn("Signal underflow: {}", .{v});
                     v = -1.0;
                 }
 
