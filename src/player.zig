@@ -4,8 +4,6 @@ const config = @import("config");
 
 const with_paplay = config.WITH_PAPLAY;
 
-// pub const SAMPLE_RATE = 44100;
-
 const Pulse = if (with_paplay) @import("./paplay.zig") else @import("./pulse.zig");
 
 const Self = @This();
@@ -51,67 +49,79 @@ pub fn deinit(self: *Self) void {
 
 const max_int16_amp = (1 << 14) - 1;
 
-const max_ahead_ms = -10000;
+fn writeSamples(self: *Self, wave: anytype, frame: i64, frames_to_write: usize) !i64 {
+    var buffer: [4800]u8 = undefined;
+    var written: usize = 0;
+    const sample_rate: f64 = @floatFromInt(self.sample_rate);
+    const max_frames: usize = buffer.len / 2 / self.channels;
+    const ftw: usize = @min(frames_to_write, max_frames);
+
+    var f: i64 = frame;
+
+    var eof: bool = false;
+    L: for (0..ftw) |i| {
+        const fi: f64 = @floatFromInt(f);
+        const t: f64 = fi / sample_rate;
+        for (0..self.channels) |chan| {
+            var v = wave.value(t, chan) catch {
+                eof = true;
+                break :L;
+            };
+
+            if (v > 1.0) {
+                // std.log.warn("Signal overflow: {}", .{v});
+                v = 1.0;
+            } else if (v < -1.0) {
+                // std.log.warn("Signal underflow: {}", .{v});
+                v = -1.0;
+            }
+
+            const sv: c_short = @intFromFloat(max_int16_amp * v);
+            const sb = i * 2 * self.channels + (chan * 2);
+            const fb = sb + 2;
+            std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
+
+            if (self.output_file != null) {
+                try self.output.append(self.allocator, sv);
+            }
+        }
+        written = i * 2 * self.channels;
+        f += 1;
+    }
+    if (written > 0) {
+        try self.pa.write(buffer[0..written]);
+    }
+    if (eof) {
+        return error.Eof;
+    }
+    return f;
+}
 
 // wave: { value(t: f64, channel: usize) error{Eof}!f64 }
 pub fn play(self: *Self, wave: anytype) !void {
-    var eof = false;
-    var buffer: [4800]u8 = undefined;
     var frame: i64 = 0;
     const play_start = self.clock.now(self.io).toMicroseconds();
-    const channels = self.channels;
 
-    const sample_rate: f64 = @floatFromInt(self.sample_rate);
+    const min_samples: usize = 512;
 
-    while (!eof) {
-        var written: usize = 0;
-        const frames_per_cycle: usize = buffer.len / 2 / channels;
-        L: for (0..frames_per_cycle) |i| {
-            const fi: f64 = @floatFromInt(frame);
-            const t: f64 = fi / sample_rate;
-            for (0..channels) |chan| {
-                var v = wave.value(t, chan) catch {
-                    eof = true;
-                    break :L;
-                };
-
-                if (v > 1.0) {
-                    // std.log.warn("Signal overflow: {}", .{v});
-                    v = 1.0;
-                } else if (v < -1.0) {
-                    // std.log.warn("Signal underflow: {}", .{v});
-                    v = -1.0;
-                }
-
-                const sv: c_short = @intFromFloat(max_int16_amp * v);
-                const sb = i * 2 * channels + (chan * 2);
-                const fb = sb + 2;
-                std.mem.writePackedInt(c_short, buffer[sb..fb], 0, sv, .little);
-
-                if (self.output_file != null) {
-                    try self.output.append(self.allocator, sv);
-                }
-            }
-            written = i * 2 * channels;
-            frame += 1;
+    L: while (true) {
+        const now = self.clock.now(self.io).toMicroseconds();
+        const passed_ms = now - play_start;
+        const to_write_frames = @divTrunc(passed_ms * self.sample_rate, 1000000);
+        const frames_to_write: usize = @intCast(to_write_frames - frame);
+        if (frames_to_write > min_samples) {
+            frame = self.writeSamples(wave, frame, frames_to_write) catch |err| {
+               if (err == error.Eof) {
+                   break :L;
+               }
+               return err;
+            };
         }
-        if (written == 0) {
-            break;
-        }
-
-        try self.pa.write(buffer[0..written]);
-
-        const written_ms: i64 = @divTrunc(1000000 * frame, self.sample_rate);
-        const finish = self.clock.now(self.io).toMicroseconds();
-        const passed_ms = finish - play_start;
-        const ahead = written_ms - passed_ms;
-        // std.debug.print("written samples={}, ms={}, passed_ms={}, ahead={}\n", .{frame, written_ms, passed_ms, ahead});
-        if (ahead > max_ahead_ms) {
-            const sleep_ns: u64 = @intCast((ahead - max_ahead_ms) * 1000);
-            try self.io.sleep(.fromNanoseconds(sleep_ns), .awake);
+        else {
+            try self.io.sleep(.fromMilliseconds(10), .awake);
         }
     }
-    std.log.info("Samples written: {}\n", .{frame});
+    std.log.info("Frames written: {}\n", .{frame});
 
     try self.saveWavFile();
 }
