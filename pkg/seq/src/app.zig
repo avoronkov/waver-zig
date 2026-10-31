@@ -28,7 +28,7 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs
 
     rand.init(io, clock);
 
-    const tape = Tape.init(allocator);
+    var tape = Tape.init(allocator, io);
     errdefer tape.deinit();
 
     var beeper = try Beeper.init(allocator, io, clock, input, args.stop);

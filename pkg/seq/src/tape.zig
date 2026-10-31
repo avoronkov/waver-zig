@@ -12,17 +12,24 @@ const Wave = struct {
 };
 
 allocator: Allocator,
+io: std.Io,
+mutex: std.Io.Mutex = .init,
 waves: std.DoublyLinkedList,
 stopping: bool = false,
 
-pub fn init(a: Allocator) Self {
+pub fn init(a: Allocator, io: std.Io) Self {
     return .{
         .allocator = a,
+        .io = io,
         .waves = .{},
     };
 }
 
-pub fn deinit(self: Self) void {
+pub fn deinit(self: *Self) void {
+    // TODO do we need this?
+    // try self.mutex.lock(self.io);
+    // defer self.mutex.unlock(self.io);
+
     var it = self.waves.first;
     while (it) |node| {
         it = node.next;
@@ -38,14 +45,16 @@ pub fn append(self: *Self, wave: Inst.Wave) !void {
         .wave = wave,
         .node = .{},
     };
-    // const node = try self.allocator.create(L.Node);
-    // node.* = .{
-    //     .data = wave,
-    // };
+
+    try self.mutex.lock(self.io);
+    defer self.mutex.unlock(self.io);
     self.waves.append(&w.node);
 }
 
-pub fn value(self: *Self, t: f64, channel: usize) EofError!f64 {
+pub fn value(self: *Self, t: f64, channel: usize) error{Eof,Canceled}!f64 {
+    try self.mutex.lock(self.io);
+    defer self.mutex.unlock(self.io);
+
     if (self.stopping and self.waves.len() == 0) {
         return error.Eof;
     }
