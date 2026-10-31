@@ -3,10 +3,10 @@ const std = @import("std");
 pub fn setStructField(obj: anytype, key: []const u8, value: anytype) !void {
     switch (@typeInfo(@TypeOf(obj.*))) {
         .@"struct" => |structInfo| {
-            inline for (structInfo.fields) |field| {
-                if (std.mem.eql(u8, field.name, key)) {
-                    if (@FieldType(@TypeOf(obj.*), field.name) == @TypeOf(value)) {
-                        @field(obj, field.name) = value;
+            inline for (structInfo.field_names) |field_name| {
+                if (std.mem.eql(u8, field_name, key)) {
+                    if (@FieldType(@TypeOf(obj.*), field_name) == @TypeOf(value)) {
+                        @field(obj, field_name) = value;
                     } else {
                         return error.valueTypeMismatch;
                     }
