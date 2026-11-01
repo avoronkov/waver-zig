@@ -163,6 +163,7 @@ pub fn parse(self: *Self) !void {
 
     // prog.seqCounters = self.seqCounters;
     self.prog.scaleFrequencies = &edo12.frequencies;
+    self.prog.notes_names = edo12.notes_names[0..];
     self.prog.mtime = self.mtime;
 }
 

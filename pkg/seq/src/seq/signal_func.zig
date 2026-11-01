@@ -11,8 +11,6 @@ const Ident = primitives.Ident;
 
 const Allocator = std.mem.Allocator;
 
-pub const Signals = []Signal;
-
 const SignalList = std.ArrayListUnmanaged(Signal);
 
 pub const SignalError = error{ badInstrument, badFrequency, badAmplitude, badDuration };
@@ -23,7 +21,7 @@ pub const SignalFunc = struct {
     amplitude: Literal,
     duration_bits: Literal,
 
-    pub fn eval(self: SignalFunc, a: Allocator, ctx: *Context) !Signals {
+    pub fn eval(self: SignalFunc, a: Allocator, ctx: *Context) ![]Signal {
         var res: SignalList = .empty;
         errdefer res.deinit(a);
 
@@ -48,20 +46,28 @@ pub const SignalFunc = struct {
         const freqVal = try lisp.eval(a, ctx, self.freq);
         defer value.free_value(a, freqVal);
         switch (freqVal) {
-            .float => |v| try self.evalAmpDur(a, ctx, inst, v, res),
+            .float => |v| {
+                const note_str = try std.fmt.allocPrint(a, "{}", .{ v });
+                try self.evalAmpDur(a, ctx, inst, note_str, v, res);
+            },
             .number => |n| blk: {
                 const idx: usize = @intCast(n);
                 const freq = ctx.scaleFrequencies[idx];
-                break :blk try self.evalAmpDur(a, ctx, inst, freq, res);
+                const note_str = try a.dupe(u8, ctx.notes_names[idx]);
+                break :blk try self.evalAmpDur(a, ctx, inst, note_str, freq, res);
             },
             .list => |l| {
                 for (l) |v| {
                     switch (v) {
-                        .float => |f| try self.evalAmpDur(a, ctx, inst, f, res),
+                        .float => |f| {
+                            const note_str = try std.fmt.allocPrint(a, "{}", .{ v });
+                            try self.evalAmpDur(a, ctx, inst, note_str, f, res);
+                        },
                         .number => |n| blk: {
                             const idx: usize = @intCast(n);
                             const freq = ctx.scaleFrequencies[idx];
-                            break :blk try self.evalAmpDur(a, ctx, inst, freq, res);
+                            const note_str = try a.dupe(u8, ctx.notes_names[idx]);
+                            break :blk try self.evalAmpDur(a, ctx, inst, note_str, freq, res);
                         },
                         else => {
                             std.log.err("badFrequency [1]: {any}\n", .{v});
@@ -77,7 +83,20 @@ pub const SignalFunc = struct {
         }
     }
 
-    fn evalAmpDur(self: SignalFunc, a: Allocator, ctx: *Context, inst: Ident, freq: f64, res: *SignalList) !void {
+    fn freqToStr(self: SignalFunc, a: Allocator, freq: Literal) ![]const u8 {
+        _ = self;
+        switch (freq) {
+            .ident => |id| return a.dupe(u8, id.string()),
+            .number => |n| return std.fmt.allocPrint(a, "{}", .{ n }),
+            .float => |f| return std.fmt.allocPrint(a, "{}", .{ f }),
+            else => {
+                std.log.err("badFrequency [2]: {any}\n", .{freq});
+                return error.badFrequency;
+            },
+        }
+    }
+
+    fn evalAmpDur(self: SignalFunc, a: Allocator, ctx: *Context, inst: Ident, note: []const u8, freq: f64, res: *SignalList) !void {
         const ampVal = try lisp.eval(a, ctx, self.amplitude);
         defer value.free_value(a, ampVal);
         const amp = switch (ampVal) {
@@ -101,6 +120,7 @@ pub const SignalFunc = struct {
 
         const sig: Signal = .{
             .instrument = try a.dupe(u8, inst.string()),
+            .note = note,
             .freq = freq,
             .amplitude = amp,
             .duration_bits = dur,

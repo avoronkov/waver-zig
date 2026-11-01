@@ -17,6 +17,7 @@ variables: std.StringHashMapUnmanaged(Literal) = .empty,
 functions: std.StringHashMapUnmanaged(Literal) = .empty,
 user_signalers: std.StringHashMapUnmanaged(Signaler) = .empty,
 scaleFrequencies: []const f64 = &[_]f64{},
+notes_names: []const []const u8 = &[_][]u8{},
 tempo: ?f64 = null,
 stop: ?i64 = null,
 

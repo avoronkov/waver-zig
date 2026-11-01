@@ -5,7 +5,6 @@ const signal_func = @import("./signal_func.zig");
 const Context = @import("./context.zig");
 
 const SignalFunc = signal_func.SignalFunc;
-const Signals = signal_func.Signals;
 
 const SignalList = std.ArrayListUnmanaged(Signal);
 
@@ -56,7 +55,7 @@ pub fn add_signaler(self: *Self, name: []const u8) !void {
 
 const SignalsErrors = error{ OutOfMemory, emptyList, badValue, badAmplitude, badDuration, badFrequency, badInstrument };
 
-pub fn signals(self: Self, ctx: *Context) SignalsErrors!?Signals {
+pub fn signals(self: Self, ctx: *Context) SignalsErrors!?[]Signal {
     for (self.signal_filters.items) |filt| {
         if (!filt.apply(ctx)) {
             return null;

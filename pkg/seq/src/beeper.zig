@@ -58,6 +58,7 @@ pub fn run(self: *Self, tape: *Tape) !void {
     self.context.functions = &self.program.functions;
     self.context.user_signalers = &self.program.user_signalers;
     self.context.scaleFrequencies = self.program.scaleFrequencies;
+    self.context.notes_names = self.program.notes_names;
 
     if (self.program.tempo) |tempo| {
         std.log.info("Tempo = {}", .{tempo});
@@ -143,7 +144,7 @@ fn handle_signaler(self: *Self, s: Signaler, bit: i64, bit_time_sec: f64, tape: 
                 .dur = durSec,
             }, bit_time_sec);
             if (self.log) |log| {
-                try log.print("[{d}] '{s}' freq={}, amp={}, bits={}\n", .{ bit, sig.instrument, sig.freq, sig.amplitude, duration_bits });
+                try log.print("[{d}] '{s}' \"{s}\" freq={}, amp={}, bits={}\n", .{ bit, sig.instrument, sig.note, sig.freq, sig.amplitude, duration_bits });
                 try log.flush();
             }
             try tape.append(w);

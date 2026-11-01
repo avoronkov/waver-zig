@@ -18,6 +18,7 @@ functions: ?*const Variables = null,
 user_signalers: ?*const std.StringHashMapUnmanaged(Signaler) = null,
 
 scaleFrequencies: []const f64,
+notes_names: []const []const u8,
 
 bit: i64 = 0,
 realBit: i64 = 0,
@@ -36,6 +37,7 @@ pub fn init(a: Allocator) Self {
     return .{
         .allocator = a,
         .scaleFrequencies = &[_]f64{},
+        .notes_names = &[_][]u8{},
     };
 }
 
