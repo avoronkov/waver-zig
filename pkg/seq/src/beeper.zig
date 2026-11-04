@@ -31,8 +31,8 @@ pub fn init(
     const prog = try Parser.parseFile(allocator, io, file);
     var context = Context.init(allocator);
 
-    const sc: usize = @intCast(prog.seqCounters);
-    try context.initSeqCounters(sc);
+    try context.initSeqCounters(prog.seqCounters);
+    try context.initRepeatCounters(prog.repeatCounters);
 
     return .{
         .allocator = allocator,
@@ -169,8 +169,8 @@ fn check_file_modified(self: *Self, bit: i64) !void {
         }
         const prog = try Parser.parseFile(self.allocator, self.io, self.file);
 
-        const sc: usize = @intCast(prog.seqCounters);
-        try self.context.initSeqCounters(sc);
+        try self.context.initSeqCounters(prog.seqCounters);
+        try self.context.initRepeatCounters(prog.repeatCounters);
 
         self.program.deinit();
         self.program = prog;

@@ -1,0 +1,2 @@
+s = sine
+:4 s repeat 4 seq A3,G3

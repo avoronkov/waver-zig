@@ -12,6 +12,7 @@ const Literal = literal.Literal;
 const EvalError = error{ emptyList, badValue, OutOfMemory };
 
 pub fn eval(a: Allocator, ctx: *Context, expr: Literal) EvalError!Value {
+    std.log.debug("eval: {any}", .{ expr });
     return switch (expr) {
         .number => |v| Value{ .number = v },
         .float => |v| Value{ .float = v },
@@ -47,6 +48,7 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .func => evalFunc(a, ctx, l[1..]),
         .rand => evalRand(a, ctx, l[1..]),
         .seq => evalSeq(a, ctx, l[1..]),
+        .repeat => evalRepeat(a, ctx, l[1..]),
         .plus => evalOp(a, ctx, opPlus, l[1..]),
         .multiply => evalOp(a, ctx, opMultiply, l[1..]),
         .divide => evalOp(a, ctx, opDivide, l[1..]),
@@ -153,6 +155,35 @@ fn evalSeq(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
     }
 }
 
+// .repeat counter max_repeat item
+fn evalRepeat(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
+    if (l.len != 3) {
+        std.debug.panic("evalRepeat: {any}", .{l});
+    }
+    const counter: usize = @intCast(l[0].number);
+    const i = ctx.getRepeatCounter(counter);
+    const prev = ctx.getRepeatValue(counter);
+
+    const repeat = try eval(a, ctx, l[1]);
+    const repeatSize = switch (repeat) {
+        .number => |n| n,
+        else => return error.badValue,
+    };
+    if (prev) |prev_value| {
+        if (i >= repeatSize) {
+            const val = try eval(a, ctx, l[2]);
+            ctx.setRepeatItem(counter, 1, val);
+            return val;
+        }
+        ctx.setRepeatItem(counter, i+1, prev_value);
+        return prev_value;
+    } else {
+        const val = try eval(a, ctx, l[2]);
+        ctx.setRepeatItem(counter, 1, val);
+        return val;
+    }
+}
+
 fn isPureList(l: []const Literal) bool {
     if (l.len == 0) {
         return true;
@@ -167,6 +198,7 @@ fn isPureList(l: []const Literal) bool {
         .arg => false,
         .rand => false,
         .seq => false,
+        .repeat => false,
         .plus => false,
         .minus => false,
         .multiply => false,

@@ -3,16 +3,20 @@ const Literal = @import("./literal.zig").Literal;
 const Signaler = @import("../seq/signaler.zig");
 const Chain = @import("../chain.zig");
 const Note = @import("../note.zig");
+const Value = @import("./value.zig").Value;
 
 const Allocator = std.mem.Allocator;
-const SeqCounters = std.ArrayListUnmanaged(usize);
+const Counters = std.ArrayListUnmanaged(usize);
 const Variables = std.StringHashMapUnmanaged(Literal);
 
 const Self = @This();
 
 allocator: Allocator,
 
-seqCounters: SeqCounters = .empty,
+seqCounters: Counters = .empty,
+repeatCounters: Counters = .empty,
+repeatValues: std.ArrayListUnmanaged(?Value) = .empty,
+
 variables: ?*const Variables = null,
 functions: ?*const Variables = null,
 user_signalers: ?*const std.StringHashMapUnmanaged(Signaler) = null,
@@ -43,6 +47,8 @@ pub fn init(a: Allocator) Self {
 
 pub fn deinit(self: *Self) void {
     self.seqCounters.deinit(self.allocator);
+    self.repeatCounters.deinit(self.allocator);
+    self.repeatValues.deinit(self.allocator);
 }
 
 pub fn initSeqCounters(self: *Self, n: usize) !void {
@@ -57,10 +63,47 @@ pub fn initSeqCounters(self: *Self, n: usize) !void {
     }
 }
 
+pub fn initRepeatCounters(self: *Self, n: usize) !void {
+    std.log.debug("initRepeatCounters: {}", .{ n });
+    if (self.repeatCounters.items.len > n) {
+        self.repeatCounters.shrinkAndFree(self.allocator, n);
+    } else if (self.repeatCounters.items.len < n) {
+        const prev_len = self.repeatCounters.items.len;
+        try self.repeatCounters.resize(self.allocator, n);
+        for (prev_len..n) |i| {
+            self.repeatCounters.items[i] = 0;
+        }
+    }
+
+    if (self.repeatValues.items.len > n) {
+        self.repeatValues.shrinkAndFree(self.allocator, n);
+    } else if (self.repeatValues.items.len < n) {
+        const prev_len = self.repeatValues.items.len;
+        try self.repeatValues.resize(self.allocator, n);
+        for (prev_len..n) |i| {
+            self.repeatValues.items[i] = null;
+        }
+    }
+}
+
+
 pub fn getSeqCounter(self: Self, index: usize) usize {
     return self.seqCounters.items[index];
 }
 
 pub fn setSeqCounter(self: *Self, index: usize, value: usize) void {
     self.seqCounters.items[index] = value;
+}
+
+pub fn getRepeatCounter(self: Self, index: usize) usize {
+    return self.repeatCounters.items[index];
+}
+
+pub fn getRepeatValue(self: Self, index: usize) ?Value {
+    return self.repeatValues.items[index];
+}
+
+pub fn setRepeatItem(self: *Self, index: usize, count: usize, value: Value) void {
+    self.repeatCounters.items[index] = count;
+    self.repeatValues.items[index] = value;
 }
