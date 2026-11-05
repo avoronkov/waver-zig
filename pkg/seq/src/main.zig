@@ -13,7 +13,7 @@ pub fn main(init: std.process.Init) !void {
     var app = try App.init(allocator, io, clock, init.minimal.args, stdout);
     defer app.deinit();
 
-    app.beeper.setTempo(60);
+    app.beeper.setTempo(60, 0);
 
     var t = try app.run();
     t.join();
