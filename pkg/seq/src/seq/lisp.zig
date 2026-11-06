@@ -49,6 +49,7 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .rand => evalRand(a, ctx, l[1..]),
         .seq => evalSeq(a, ctx, l[1..]),
         .repeat => evalRepeat(a, ctx, l[1..]),
+        .loop => evalLoop(a, ctx, l[1..]),
         .plus => evalOp(a, ctx, opPlus, l[1..]),
         .multiply => evalOp(a, ctx, opMultiply, l[1..]),
         .divide => evalOp(a, ctx, opDivide, l[1..]),
@@ -184,6 +185,31 @@ fn evalRepeat(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
     }
 }
 
+// .loop counter loop_size item
+fn evalLoop(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
+    if (l.len != 3) {
+        std.debug.panic("evalLoop: {any}", .{l});
+    }
+    const counter: usize = @intCast(l[0].number);
+    const loop_size_value = try eval(a, ctx, l[1]);
+    const loop_size = switch (loop_size_value) {
+        .number => |n| n,
+        else => return error.badValue,
+    };
+
+    if (ctx.getLoopSize(counter) < loop_size) {
+        // append one more value
+        const val = try eval(a, ctx, l[2]);
+        try ctx.appendLoopValue(counter, val);
+        return val;
+    }
+    else {
+        // get value from context
+        return ctx.getLoopValue(counter);
+    }
+    return error.badValue;
+}
+
 fn isPureList(l: []const Literal) bool {
     if (l.len == 0) {
         return true;
@@ -199,6 +225,7 @@ fn isPureList(l: []const Literal) bool {
         .rand => false,
         .seq => false,
         .repeat => false,
+        .loop => false,
         .plus => false,
         .minus => false,
         .multiply => false,

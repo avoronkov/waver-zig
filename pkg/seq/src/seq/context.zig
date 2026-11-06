@@ -14,8 +14,12 @@ const Self = @This();
 allocator: Allocator,
 
 seqCounters: Counters = .empty,
+
 repeatCounters: Counters = .empty,
 repeatValues: std.ArrayListUnmanaged(?Value) = .empty,
+
+loopCounters: Counters = .empty,
+loopValues: std.ArrayListUnmanaged(std.ArrayListUnmanaged(Value)) = .empty,
 
 variables: ?*const Variables = null,
 functions: ?*const Variables = null,
@@ -48,7 +52,21 @@ pub fn init(a: Allocator) Self {
 pub fn deinit(self: *Self) void {
     self.seqCounters.deinit(self.allocator);
     self.repeatCounters.deinit(self.allocator);
+
+    for (self.repeatValues.items) |v| {
+        if (v) |val| {
+            val.deinit(self.allocator);
+        }
+    }
     self.repeatValues.deinit(self.allocator);
+
+    for (self.loopValues.items) |*values| {
+        for (values.items) |v| {
+            v.deinit(self.allocator);
+        }
+        values.deinit(self.allocator);
+    }
+    self.loopValues.deinit(self.allocator);
 }
 
 pub fn initSeqCounters(self: *Self, n: usize) !void {
@@ -64,7 +82,6 @@ pub fn initSeqCounters(self: *Self, n: usize) !void {
 }
 
 pub fn initRepeatCounters(self: *Self, n: usize) !void {
-    std.log.debug("initRepeatCounters: {}", .{ n });
     if (self.repeatCounters.items.len > n) {
         self.repeatCounters.shrinkAndFree(self.allocator, n);
     } else if (self.repeatCounters.items.len < n) {
@@ -82,6 +99,28 @@ pub fn initRepeatCounters(self: *Self, n: usize) !void {
         try self.repeatValues.resize(self.allocator, n);
         for (prev_len..n) |i| {
             self.repeatValues.items[i] = null;
+        }
+    }
+}
+
+pub fn initLoopCounters(self: *Self, n: usize) !void {
+    if (self.loopCounters.items.len > n) {
+        self.loopCounters.shrinkAndFree(self.allocator, n);
+    } else if (self.loopCounters.items.len < n) {
+        const prev_len = self.loopCounters.items.len;
+        try self.loopCounters.resize(self.allocator, n);
+        for (prev_len..n) |i| {
+            self.loopCounters.items[i] = 0;
+        }
+    }
+
+    if (self.loopValues.items.len > n) {
+        self.loopValues.shrinkAndFree(self.allocator, n);
+    } else if (self.loopValues.items.len < n) {
+        const prev_len = self.loopValues.items.len;
+        try self.loopValues.resize(self.allocator, n);
+        for (prev_len..n) |i| {
+            self.loopValues.items[i] = .empty;
         }
     }
 }
@@ -106,4 +145,22 @@ pub fn getRepeatValue(self: Self, index: usize) ?Value {
 pub fn setRepeatItem(self: *Self, index: usize, count: usize, value: Value) void {
     self.repeatCounters.items[index] = count;
     self.repeatValues.items[index] = value;
+}
+
+pub fn getLoopSize(self: Self, index: usize) usize {
+    return self.loopValues.items[index].items.len;
+}
+
+fn getLoopCounter(self: Self, index: usize) usize {
+    return self.loopCounters.items[index];
+}
+
+pub fn appendLoopValue(self: *Self, index: usize, value: Value) !void {
+    try self.loopValues.items[index].append(self.allocator, value);
+}
+
+pub fn getLoopValue(self: *Self, index: usize) Value {
+    const val = self.loopValues.items[index].items[self.loopCounters.items[index]];
+    self.loopCounters.items[index] = @rem(self.loopCounters.items[index] + 1, self.getLoopSize(index)); 
+    return val;
 }

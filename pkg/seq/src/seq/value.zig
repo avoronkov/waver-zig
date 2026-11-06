@@ -9,18 +9,22 @@ pub const Value = union(enum) {
     str: primitives.Path,
     ident: primitives.Ident,
     list: []Value,
+
+    pub fn deinit(self: *const Value, a: Allocator) void {
+        switch (self.*) {
+            .list => |l| {
+                for (l) |it| {
+                    it.deinit(a);
+                }
+                a.free(l);
+            },
+            else => return,
+        }
+    }
 };
 
 pub fn free_value(a: Allocator, value: Value) void {
-    return switch (value) {
-        .list => |l| {
-            for (l) |it| {
-                free_value(a, it);
-            }
-            a.free(l);
-        },
-        else => return,
-    };
+    value.deinit(a);
 }
 
 pub fn copy_value(a: Allocator, value: Value) !Value {
