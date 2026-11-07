@@ -33,6 +33,7 @@ pub fn init(
 
     try context.initSeqCounters(prog.seqCounters);
     try context.initRepeatCounters(prog.repeatCounters);
+    try context.initLoopCounters(prog.loopCounters);
 
     return .{
         .allocator = allocator,
@@ -171,6 +172,7 @@ fn check_file_modified(self: *Self, bit: i64) !void {
 
         try self.context.initSeqCounters(prog.seqCounters);
         try self.context.initRepeatCounters(prog.repeatCounters);
+        try self.context.initLoopCounters(prog.loopCounters);
 
         self.program.deinit();
         self.program = prog;

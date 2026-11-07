@@ -61,6 +61,10 @@ const funcParsers = [_]struct {
         .token = Lexer.Token{ .ident = "repeat" },
         .parse = parseRepeat,
     },
+    .{
+        .token = Lexer.Token{ .ident = "loop" },
+        .parse = parseLoop,
+    },
 };
 
 const atoms = [_]struct {
@@ -865,6 +869,24 @@ fn parseRepeat(self: *Self) ParseError!Literal {
 
     self.prog.repeatCounters += 1;
     std.log.debug("self.prog.repeatCounters = {}", .{ self.prog.repeatCounters });
+
+    return Literal{
+        .list = literals,
+    };
+}
+
+fn parseLoop(self: *Self) ParseError!Literal {
+    const argTimes = try self.parseAtom();
+    const argSeq = try self.parseAtom();
+
+    var literals = try self.allocator.alloc(Literal, 4);
+    literals[0] = .loop;
+    literals[1] = .{ .number = @intCast(self.prog.loopCounters) };
+    literals[2] = argTimes;
+    literals[3] = argSeq;
+
+    self.prog.loopCounters += 1;
+    std.log.debug("self.prog.loopCounters = {}", .{ self.prog.loopCounters });
 
     return Literal{
         .list = literals,
