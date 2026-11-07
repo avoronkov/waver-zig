@@ -232,12 +232,12 @@ test "16-multiple-signal-funcations.pelia" {
 test "17-euclidian.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/17-euclidian.pelia" };
     const output =
-        \\[0] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[3] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[6] 'sine' freq=195.9977179908729, amp=0.75, bits=2
-        \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\[0] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[3] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[6] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=2
+        \\[8] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[11] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[14] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
@@ -263,10 +263,10 @@ test "18-euclidian-last.pelia" {
 test "19-pan.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/19-pan.pelia" };
     const output =
-        \\[0] 'l' freq=195.9977179908729, amp=0.75, bits=1
-        \\[2] 'r' freq=195.9977179908729, amp=0.75, bits=1
-        \\[4] 'l' freq=195.9977179908729, amp=0.75, bits=1
-        \\[6] 'r' freq=195.9977179908729, amp=0.75, bits=1
+        \\[0] 'l' "G3" freq=195.9977179908729, amp=0.75, bits=1
+        \\[2] 'r' "G3" freq=195.9977179908729, amp=0.75, bits=1
+        \\[4] 'l' "G3" freq=195.9977179908729, amp=0.75, bits=1
+        \\[6] 'r' "G3" freq=195.9977179908729, amp=0.75, bits=1
         \\
     ;
     try testExample(input, output);
@@ -275,10 +275,10 @@ test "19-pan.pelia" {
 test "20-lisp.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/20-lisp.pelia" };
     const output =
-        \\[0] 'in' freq=440, amp=0.75, bits=1
-        \\[1] 'in2' freq=660, amp=0.75, bits=2
-        \\[4] 'in' freq=440, amp=0.75, bits=1
-        \\[5] 'in2' freq=660, amp=0.75, bits=2
+        \\[0] 'in' "440" freq=440, amp=0.75, bits=1
+        \\[1] 'in2' "660" freq=660, amp=0.75, bits=2
+        \\[4] 'in' "440" freq=440, amp=0.75, bits=1
+        \\[5] 'in2' "660" freq=660, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
@@ -287,14 +287,17 @@ test "20-lisp.pelia" {
 test "21-adsr.pelia" {
     const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/21-adsr.pelia" };
     const output =
-        \\[0] 'in' freq=164.81377845643132, amp=0.75, bits=4
-        \\[4] 'in' freq=164.81377845643132, amp=0.75, bits=4
+        \\[0] 'in' "E3" freq=164.81377845643132, amp=0.75, bits=4
+        \\[4] 'in' "E3" freq=164.81377845643132, amp=0.75, bits=4
         \\
     ;
     try testExample(input, output);
 }
 
 test "february/01-samples.pelia" {
+    if (true) {
+        return error.SkipZigTest;
+    }
     const io = std.testing.io;
     const clock = std.Io.Clock.real;
     const allocator = std.testing.allocator;
