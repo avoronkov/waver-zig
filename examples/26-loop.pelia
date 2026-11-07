@@ -1,2 +1,3 @@
+# seed 6697801753987277173
 S = sine
-:8 S loop 4 rand A3, B3, C3, D3, E3, F3, G3
+:6 S loop 8 rand A3, B3, C3, D3, E3, F3, G3
