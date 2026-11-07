@@ -1,2 +1,2 @@
 S = sine
-:4 S loop 4 rand A3, B3, C3, D3, E3, F3, G3
+:8 S loop 4 rand A3, B3, C3, D3, E3, F3, G3

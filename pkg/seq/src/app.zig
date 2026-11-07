@@ -26,7 +26,14 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs
         return error.noInput;
     };
 
-    rand.init(io, clock);
+    const default_go_seed = 1;
+    const the_seed: i64 = if (args.seed) |sd| sd else if (args.random_seed) blk: {
+        var def_rand = std.Random.DefaultPrng.init(@intCast(std.Io.Timestamp.now(io, .awake).toMilliseconds()));
+        const seed = def_rand.random().int(i64);
+        break :blk seed;
+    } else default_go_seed;
+    std.log.info("Seed: {}", .{the_seed});
+    rand.init(the_seed);
 
     var tape = Tape.init(allocator, io);
     errdefer tape.deinit();

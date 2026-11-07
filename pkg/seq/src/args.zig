@@ -9,6 +9,8 @@ dump_wav: bool = false,
 stop: ?i64 = null,
 channels: u8 = 2,
 sample_rate: i64 = 44100,
+random_seed: bool = false,
+seed: ?i64 = null,
 verbose: bool = false,
 help: bool = false,
 
@@ -45,6 +47,19 @@ pub fn init(a: std.mem.Allocator, pargs: std.process.Args) !Self {
                     return error.badArg;
                 }
                 res.sample_rate = sample_rate;
+            } else {
+                return error.badArg;
+            }
+            continue;
+        }
+        if (std.mem.eql(u8, ar, "--random-seed") or std.mem.eql(u8, ar, "-r")) {
+            res.random_seed = true;
+            continue;
+        }
+        if (std.mem.eql(u8, ar, "--seed") or std.mem.eql(u8, ar, "-R")) {
+            if (args.next()) |ar2| {
+                const seed = try std.fmt.parseInt(i64, ar2, 10);
+                res.seed = seed;
             } else {
                 return error.badArg;
             }

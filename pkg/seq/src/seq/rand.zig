@@ -1,15 +1,10 @@
 const std = @import("std");
-const DefaultPrng = std.Random.DefaultPrng;
-const Random = std.Random;
 
 // SAFETY: initialized by init()
 pub var random: RngSource = undefined;
 
-pub fn init(io: std.Io, clock: std.Io.Clock) void {
-    _ = io;
-    _ = clock;
-
-    random = RngSource.init(1);
+pub fn init(seed: i64) void {
+    random = RngSource.init(seed);
 }
 
 // Golang math.rand port.

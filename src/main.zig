@@ -21,6 +21,8 @@ pub fn main(init: std.process.Init) !void {
                 \\ --mono, -m            - output audio in mono (legacy)
                 \\ --sample-rate,
                 \\     -S [44100|48000]  - sample rate
+                \\ --random-seed, -r     - use random seed for PRNG
+                \\ --seed, -R <int>      - use specified seed for PRNG
                 \\ --verbose, -V         - verbose output
                 \\ --help, -h            - show this help
                 \\
