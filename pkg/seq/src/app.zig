@@ -108,28 +108,22 @@ test "04-waveform.pelia" {
     try testExample(input, output);
 }
 test "05-transpose-chord.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "2", "../../examples/05-transpose-chord.pelia" };
     const output =
-        \\[0] 'in' freq=293.6647679173985, amp=0.75, bits=2
-        \\[0] 'in' freq=369.99442271162945, amp=0.75, bits=2
-        \\[0] 'in' freq=440, amp=0.75, bits=2
-        \\[0] 'in' freq=220, amp=0.75, bits=2
+        \\[0] 'in' "D4" freq=293.6647679173985, amp=0.75, bits=2
+        \\[0] 'in' "Gb4" freq=369.99442271162945, amp=0.75, bits=2
+        \\[0] 'in' "A4" freq=440, amp=0.75, bits=2
+        \\[0] 'in' "A3" freq=220, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 test "06-funcs.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "2", "../../examples/06-funcs.pelia" };
     const output =
-        \\[0] 'sine' freq=261.6255653005882, amp=0.75, bits=2
-        \\[0] 'sine' freq=329.62755691286264, amp=0.75, bits=2
-        \\[0] 'sine' freq=391.9954359817458, amp=0.75, bits=2
+        \\[0] 'sine' "C4" freq=261.6255653005882, amp=0.75, bits=2
+        \\[0] 'sine' "E4" freq=329.62755691286264, amp=0.75, bits=2
+        \\[0] 'sine' "G4" freq=391.9954359817458, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
@@ -145,100 +139,79 @@ test "06-funcs.pelia" {
 //     ,
 // },
 test "08-filter-am.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "1", "../../examples/08-filter-am.pelia" };
     const output =
-        \\[0] 'in' freq=349.2282314329977, amp=0.75, bits=2
+        \\[0] 'in' "F4" freq=349.2282314329977, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 
 test "09-bits-range.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/09-bits-range.pelia" };
     const output =
-        \\[4] 'ins' freq=220, amp=0.75, bits=2
-        \\[6] 'ins' freq=220, amp=0.75, bits=2
-        \\[8] 'ins' freq=220, amp=0.75, bits=2
-        \\[10] 'ins' freq=220, amp=0.75, bits=2
+        \\[4] 'ins' "A3" freq=220, amp=0.75, bits=2
+        \\[6] 'ins' "A3" freq=220, amp=0.75, bits=2
+        \\[8] 'ins' "A3" freq=220, amp=0.75, bits=2
+        \\[10] 'ins' "A3" freq=220, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 test "11-stop.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "../../examples/11-stop.pelia" };
     const output =
-        \\[0] 'sine' freq=369.99442271162945, amp=0.75, bits=2
-        \\[2] 'sine' freq=369.99442271162945, amp=0.75, bits=2
-        \\[4] 'sine' freq=369.99442271162945, amp=0.75, bits=2
+        \\[0] 'sine' "Gb4" freq=369.99442271162945, amp=0.75, bits=2
+        \\[2] 'sine' "Gb4" freq=369.99442271162945, amp=0.75, bits=2
+        \\[4] 'sine' "Gb4" freq=369.99442271162945, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 test "12-user-signalers.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "../../examples/12-user-signalers.pelia" };
     const output =
-        \\[4] 'sine' freq=246.94165062806425, amp=0.75, bits=2
-        \\[6] 'sine' freq=246.94165062806425, amp=0.75, bits=2
-        \\[8] 'sine' freq=246.94165062806425, amp=0.75, bits=2
+        \\[4] 'sine' "B3" freq=246.94165062806425, amp=0.75, bits=2
+        \\[6] 'sine' "B3" freq=246.94165062806425, amp=0.75, bits=2
+        \\[8] 'sine' "B3" freq=246.94165062806425, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 
 test "13-embeded-sample.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "../../examples/13-embeded-sample.pelia" };
     const output =
-        \\[0] 'Kick' freq=0, amp=0.75, bits=2
-        \\[2] 'Kick' freq=0, amp=0.75, bits=2
-        \\[4] 'Kick' freq=0, amp=0.75, bits=2
-        \\[6] 'Kick' freq=0, amp=0.75, bits=2
+        \\[0] 'Kick' "0" freq=0, amp=0.75, bits=2
+        \\[2] 'Kick' "0" freq=0, amp=0.75, bits=2
+        \\[4] 'Kick' "0" freq=0, amp=0.75, bits=2
+        \\[6] 'Kick' "0" freq=0, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 
 test "14-std-functions.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "8", "../../examples/14-std-functions.pelia" };
     const output =
-        \\[0] 'sine' freq=220, amp=0.75, bits=2
-        \\[2] 'sine' freq=261.6255653005882, amp=0.75, bits=2
-        \\[4] 'sine' freq=329.62755691286264, amp=0.75, bits=2
-        \\[6] 'sine' freq=220, amp=0.75, bits=2
+        \\[0] 'sine' "A3" freq=220, amp=0.75, bits=2
+        \\[2] 'sine' "C4" freq=261.6255653005882, amp=0.75, bits=2
+        \\[4] 'sine' "E4" freq=329.62755691286264, amp=0.75, bits=2
+        \\[6] 'sine' "A3" freq=220, amp=0.75, bits=2
         \\
     ;
     try testExample(input, output);
 }
 
 test "15-every-list.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/15-every-list.pelia" };
     const output =
-        \\[0] 'sine' freq=220, amp=0.75, bits=2
-        \\[2] 'sine' freq=261.6255653005882, amp=0.75, bits=3
-        \\[5] 'sine' freq=329.62755691286264, amp=0.75, bits=3
-        \\[8] 'sine' freq=220, amp=0.75, bits=2
-        \\[10] 'sine' freq=261.6255653005882, amp=0.75, bits=3
-        \\[13] 'sine' freq=329.62755691286264, amp=0.75, bits=3
+        \\[0] 'sine' "A3" freq=220, amp=0.75, bits=2
+        \\[2] 'sine' "C4" freq=261.6255653005882, amp=0.75, bits=3
+        \\[5] 'sine' "E4" freq=329.62755691286264, amp=0.75, bits=3
+        \\[8] 'sine' "A3" freq=220, amp=0.75, bits=2
+        \\[10] 'sine' "C4" freq=261.6255653005882, amp=0.75, bits=3
+        \\[13] 'sine' "E4" freq=329.62755691286264, amp=0.75, bits=3
         \\
     ;
     try testExample(input, output);
@@ -271,17 +244,14 @@ test "17-euclidian.pelia" {
 }
 
 test "18-euclidian-last.pelia" {
-    if (true) {
-        return error.SkipZigTest;
-    }
     const input = &[_][*:0]const u8{ "self", "--stop", "16", "../../examples/18-euclidian-last.pelia" };
     const output =
-        \\[2] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[5] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[6] 'sine' freq=195.9977179908729, amp=0.75, bits=2
-        \\[8] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[11] 'sine' freq=195.9977179908729, amp=0.75, bits=3
-        \\[14] 'sine' freq=195.9977179908729, amp=0.75, bits=2
+        \\[2] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[5] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=2
+        \\[7] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[10] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
+        \\[13] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=2
+        \\[15] 'sine' "G3" freq=195.9977179908729, amp=0.75, bits=3
         \\
     ;
     try testExample(input, output);
@@ -323,6 +293,7 @@ test "21-adsr.pelia" {
 
 test "february/01-samples.pelia" {
     if (true) {
+        // TODO need to examine this test: it takes too long to finish.
         return error.SkipZigTest;
     }
     const io = std.testing.io;

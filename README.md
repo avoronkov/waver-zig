@@ -4,9 +4,9 @@ Zig implementation of a musical programming language Pelia.
 
 ## TODO
 
-[ ] "repeat" function
+[X] "repeat" function
 
-[ ] "loop" function
+[X] "loop" function
 
 [X] "tempo" pragma
 
@@ -14,7 +14,7 @@ Zig implementation of a musical programming language Pelia.
 
 [ ] edo19
 
-[ ] euclidian rhythms
+[X] euclidian rhythms
 
 [X] embedeb samples
 
