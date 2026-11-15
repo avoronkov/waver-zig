@@ -89,6 +89,30 @@ const atoms = [_]struct {
     },
 };
 
+const PragmaParser = *const fn (self: *Self) ParseError!void;
+
+const pragmaParsers = [_]struct {
+    token: Lexer.Token,
+    parse: PragmaParser,
+}{
+    .{
+        .token = Lexer.Token{ .ident = "tempo" },
+        .parse = parsePragmaTempo,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "stop" },
+        .parse = parsePragmaStop,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "scale" },
+        .parse = parsePragmaScale,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "srand" },
+        .parse = parsePragmaSrand,
+    },
+};
+
 allocator: Allocator,
 io: std.Io,
 lexer: Lexer,
@@ -189,6 +213,9 @@ fn nextStatementType(self: *Self) !StatementType {
     }
 
     if (token == .percent or token == .double_percent) {
+        return .pragma;
+    }
+    if (findPragmaParser(token) != null) {
         return .pragma;
     }
     return switch (token) {
@@ -365,6 +392,8 @@ const ParseError = error{
     OutOfMemory,
     badKey,
     valueTypeMismatch,
+    unknownPragma,
+    unknownScale,
 };
 
 fn parseAtom(self: *Self) ParseError!Literal {
@@ -494,55 +523,67 @@ fn checkWaveformUsed(self: *Self, prog: *Program) !void {
     }
 }
 
-fn parsePragma(self: *Self) !void {
-    // Drop % (%% not supported)
-    self.lexer.drop();
-    const pragma = if (self.lexer.pop()) |tok| blk: {
+fn parsePragmaTempo(self: *Self) ParseError!void {
+    const tempo: f64 = if (self.lexer.pop()) |tok| blk: {
         break :blk switch (tok) {
-            .ident => |id| id,
+            .float => |f| f,
+            .number => |n| @floatFromInt(n),
             else => return error.unexpectedToken,
         };
     } else return error.unexpectedEof;
+    self.prog.tempo = tempo;
+}
 
-    if (std.mem.eql(u8, pragma, "tempo")) {
-        const tempo: f64 = if (self.lexer.pop()) |tok| blk: {
-            break :blk switch (tok) {
-                .float => |f| f,
-                .number => |n| @floatFromInt(n),
-                else => return error.unexpectedToken,
-            };
-        } else return error.unexpectedEof;
-        self.prog.tempo = tempo;
-    } else if (std.mem.eql(u8, pragma, "stop")) {
-        const stop: i64 = if (self.lexer.pop()) |tok| blk: {
-            break :blk switch (tok) {
-                .number => |n| n,
-                else => return error.unexpectedToken,
-            };
-        } else return error.unexpectedEof;
-        self.prog.stop = stop;
-    } else if (std.mem.eql(u8, pragma, "scale")) {
-        const scale_name: []const u8 = if (self.lexer.pop()) |tok| blk: {
-            break :blk switch (tok) {
-                .ident => |s| s,
-                else => return error.unexpectedToken,
-            };
-        } else return error.unexpectedEof;
-        if (!std.mem.eql(u8, scale_name, "edo12")) {
-            std.log.err("Unknown scale: {s}", .{scale_name});
-            return error.unknownScale;
+fn parsePragmaStop(self: *Self) ParseError!void {
+    const stop: i64 = if (self.lexer.pop()) |tok| blk: {
+        break :blk switch (tok) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        };
+    } else return error.unexpectedEof;
+    self.prog.stop = stop;
+}
+
+fn parsePragmaScale(self: *Self) ParseError!void {
+    const scale_name: []const u8 = if (self.lexer.pop()) |tok| blk: {
+        break :blk switch (tok) {
+            .ident => |s| s,
+            else => return error.unexpectedToken,
+        };
+    } else return error.unexpectedEof;
+    if (!std.mem.eql(u8, scale_name, "edo12")) {
+        std.log.err("Unknown scale: {s}", .{scale_name});
+        return error.unknownScale;
+    }
+    // TODO: proper edo12 and edo19 support
+}
+
+fn parsePragmaSrand(self: *Self) ParseError!void {
+    const srand: i64 = if (self.lexer.pop()) |tok| blk: {
+        break :blk switch (tok) {
+            .number => |n| n,
+            else => return error.unexpectedToken,
+        };
+    } else return error.unexpectedEof;
+    self.prog.seed = srand;
+}
+
+fn parsePragma(self: *Self) ParseError!void {
+    // Drop % (%% not supported)
+    if (self.lexer.top()) |tok| {
+        if (tok.eql(.percent)) {
+            self.lexer.drop();
         }
-        // TODO: proper edo12 and edo19 support
-    } else if (std.mem.eql(u8, pragma, "srand")) {
-        const srand: i64 = if (self.lexer.pop()) |tok| blk: {
-            break :blk switch (tok) {
-                .number => |n| n,
-                else => return error.unexpectedToken,
-            };
-        } else return error.unexpectedEof;
-        self.prog.seed = srand;
+    }
+
+    const pragma = if (self.lexer.pop()) |tok| blk: {
+        break :blk tok;
+    } else return error.unexpectedEof;
+
+    if (findPragmaParser(pragma)) |parser| {
+        try parser(self);
     } else {
-        std.log.err("Unknown pragma: {s}", .{pragma});
+        std.log.err("Unknown pragma: {any}", .{pragma});
         return error.unknownPragma;
     }
 
@@ -928,42 +969,95 @@ fn findAtom(tok: Lexer.Token) ?Literal {
     return null;
 }
 
+fn findPragmaParser(tok: Lexer.Token) ?PragmaParser {
+    for (pragmaParsers) |item| {
+        if (item.token.eql(tok)) {
+            return item.parse;
+        }
+    }
+    return null;
+}
+
+fn testParseProgram(a: Allocator, io: std.Io, input: []const u8, prog: *Program) !void {
+    var reader = std.Io.Reader.fixed(input);
+    var parser = try init(a, io, &reader, prog, null);
+    defer parser.deinit();
+
+    try parser.parse();
+}
+
 test "pragma tempo" {
     const allocator = std.testing.allocator;
-    const io = std.testing.io;
 
     const input =
         \\% tempo 144
         \\
     ;
-    var reader = std.Io.Reader.fixed(input);
+
     var prog = Program.init(allocator);
     defer prog.deinit();
-
-    var parser = try init(allocator, io, &reader, &prog, null);
-    defer parser.deinit();
-
-    try parser.parse();
+    try testParseProgram(allocator, std.testing.io, input, &prog);
 
     try std.testing.expectEqual(prog.tempo, 144);
 }
 
+test "pragma tempo (simple)" {
+    const allocator = std.testing.allocator;
+
+    const input =
+        \\tempo 145
+        \\
+    ;
+
+    var prog = Program.init(allocator);
+    defer prog.deinit();
+    try testParseProgram(allocator, std.testing.io, input, &prog);
+
+    try std.testing.expectEqual(prog.tempo, 145);
+}
+
 test "pragma stop" {
     const allocator = std.testing.allocator;
-    const io = std.testing.io;
 
     const input =
         \\% stop 82
         \\
     ;
-    var reader = std.Io.Reader.fixed(input);
+
     var prog = Program.init(allocator);
     defer prog.deinit();
-
-    var parser = try init(allocator, io, &reader, &prog, null);
-    defer parser.deinit();
-
-    try parser.parse();
+    try testParseProgram(allocator, std.testing.io, input, &prog);
 
     try std.testing.expectEqual(prog.stop, 82);
+}
+
+test "pragma stop (simple)" {
+    const allocator = std.testing.allocator;
+
+    const input =
+        \\stop 82
+        \\
+    ;
+
+    var prog = Program.init(allocator);
+    defer prog.deinit();
+    try testParseProgram(allocator, std.testing.io, input, &prog);
+
+    try std.testing.expectEqual(prog.stop, 82);
+}
+
+
+test "srand" {
+    const allocator = std.testing.allocator;
+
+    const input =
+        \\srand 86734
+        \\
+    ;
+
+    var prog = Program.init(allocator);
+    defer prog.deinit();
+    try testParseProgram(allocator, std.testing.io, input, &prog);
+
+    try std.testing.expectEqual(prog.seed, 86734);
 }
