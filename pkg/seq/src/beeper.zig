@@ -4,6 +4,7 @@ const Signaler = @import("./seq/signaler.zig");
 const Context = @import("./seq/context.zig");
 const Program = @import("./pelia/program.zig");
 const Parser = @import("./pelia/parser.zig");
+const rand = @import("./seq/rand.zig");
 
 const Self = @This();
 
@@ -34,6 +35,12 @@ pub fn init(
     try context.initSeqCounters(prog.seqCounters);
     try context.initRepeatCounters(prog.repeatCounters);
     try context.initLoopCounters(prog.loopCounters);
+
+    if (prog.seed) |seed| {
+        if (rand.random.seed != seed) {
+            rand.random.Seed(seed);
+        }
+    }
 
     return .{
         .allocator = allocator,
@@ -173,6 +180,12 @@ fn check_file_modified(self: *Self, bit: i64) !void {
         try self.context.initSeqCounters(prog.seqCounters);
         try self.context.initRepeatCounters(prog.repeatCounters);
         try self.context.initLoopCounters(prog.loopCounters);
+
+        if (prog.seed) |seed| {
+            if (rand.random.seed != seed) {
+                rand.random.Seed(seed);
+            }
+        }
 
         self.program.deinit();
         self.program = prog;

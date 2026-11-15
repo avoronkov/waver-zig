@@ -22,6 +22,7 @@ scaleFrequencies: []const f64 = &[_]f64{},
 notes_names: []const []const u8 = &[_][]u8{},
 tempo: ?f64 = null,
 stop: ?i64 = null,
+seed: ?i64 = null,
 
 pub fn init(a: Allocator) Self {
     return .{

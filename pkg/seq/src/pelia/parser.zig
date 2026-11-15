@@ -533,6 +533,14 @@ fn parsePragma(self: *Self) !void {
             return error.unknownScale;
         }
         // TODO: proper edo12 and edo19 support
+    } else if (std.mem.eql(u8, pragma, "srand")) {
+        const srand: i64 = if (self.lexer.pop()) |tok| blk: {
+            break :blk switch (tok) {
+                .number => |n| n,
+                else => return error.unexpectedToken,
+            };
+        } else return error.unexpectedEof;
+        self.prog.seed = srand;
     } else {
         std.log.err("Unknown pragma: {s}", .{pragma});
         return error.unknownPragma;

@@ -32,7 +32,6 @@ pub fn init(allocator: std.mem.Allocator, io: std.Io, clock: std.Io.Clock, pargs
         const seed = def_rand.random().int(i64);
         break :blk seed;
     } else default_go_seed;
-    std.log.info("Seed: {}", .{the_seed});
     rand.init(the_seed);
 
     var tape = Tape.init(allocator, io);

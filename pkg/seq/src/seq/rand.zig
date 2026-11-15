@@ -174,12 +174,14 @@ const RngSource = struct {
     tap:  i64,          // index into vec
     feed: i64,          // index into vec
     vec:  [rngLen]i64, // current feedback register
+    seed: i64,
     
     pub fn init(seed: i64) RngSource {
         var source: RngSource = .{
             .tap = 0,
             .feed = 0,
             .vec = std.mem.zeroes([rngLen]i64),
+            .seed = seed,
         };
         source.Seed(seed);
         return source;
@@ -187,6 +189,7 @@ const RngSource = struct {
                            //
     // Seed uses the provided seed value to initialize the generator to a deterministic state.
     pub fn Seed(rng: *RngSource, seed: i64) void {
+        std.log.info("Seed: {}", .{seed});
         rng.tap = 0;
         rng.feed = rngLen - rngTap;
 
