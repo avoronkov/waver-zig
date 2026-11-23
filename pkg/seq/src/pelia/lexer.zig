@@ -93,6 +93,7 @@ const literalTokens = [_]LiteralToken{
 allocator: Allocator,
 tokens: []Token,
 current: usize,
+currentLine: usize,
 
 pub fn init(a: Allocator, reader: *std.Io.Reader) !Self {
     var content: [4 * 1024 * 1024]u8 = undefined;
@@ -104,6 +105,7 @@ pub fn init(a: Allocator, reader: *std.Io.Reader) !Self {
         .allocator = a,
         .tokens = tokens,
         .current = 0,
+        .currentLine = 1,
     };
 }
 
@@ -125,11 +127,18 @@ pub fn pop(self: *Self) ?Token {
     }
     const res = self.tokens[self.current];
     self.current += 1;
+    if (res == .eol) {
+        // Not quite precise but OK for now.
+        self.currentLine += 1;
+    }
     return res;
 }
 
 pub fn drop(self: *Self) void {
     self.current += 1;
+    if (self.tokens[self.current] == .eol) {
+        self.currentLine += 1;
+    }
 }
 
 fn free_tokens(a: Allocator, tokens: []Token) void {

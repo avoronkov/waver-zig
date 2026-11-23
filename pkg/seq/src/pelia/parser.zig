@@ -276,7 +276,7 @@ fn parseSignalFuncs(self: *Self, s: *Signaler) !bool {
                             .eof => return false,
                             .vertical_bar => return true,
                             else => return {
-                                std.log.err("Unexpected token while parsing end of user signaler: {any}\n", .{tok});
+                                std.log.err("Line {}: unexpected token while parsing end of user signaler: {any}\n", .{self.lexer.currentLine, tok});
                                 return error.unexpectedToken;
                             },
                         }
@@ -337,7 +337,7 @@ fn parseSignalFuncs(self: *Self, s: *Signaler) !bool {
             .eof => return false,
             .vertical_bar => return true,
             else => return {
-                std.log.err("Unexpected token while parsing end of signaler: {any}\n", .{tok});
+                std.log.err("Line {}: Unexpected token while parsing end of signaler: {any}\n", .{self.lexer.currentLine, tok});
                 return error.unexpectedToken;
             },
         }
@@ -350,7 +350,7 @@ fn parseRangeStatement(self: *Self, s: *Signaler, start: i64) !void {
     self.lexer.drop();
     if (self.lexer.pop()) |token| {
         if (token != .double_dot) {
-            std.log.err("Unexpected token while parsing range statement: {any}\n", .{token});
+            std.log.err("Line {}: unexpected token while parsing range statement: {any}\n", .{self.lexer.currentLine, token});
             return error.unexpectedToken;
         }
     } else return error.unexpectedEof;
@@ -437,7 +437,7 @@ fn parseSingleAtom(self: *Self) ParseError!Literal {
             .divide => .divide,
             .underscore => Literal{ .number = 0 },
             else => {
-                std.log.err("Unexpected token while parsing atom: {any} ({})\n", .{ tok, self.lexer.current });
+                std.log.err("Line {}: unexpected token while parsing atom: {any} ({})\n", .{ self.lexer.currentLine, tok, self.lexer.current });
                 return error.unexpectedToken;
             },
         };
@@ -552,7 +552,7 @@ fn parsePragmaScale(self: *Self) ParseError!void {
         };
     } else return error.unexpectedEof;
     if (!std.mem.eql(u8, scale_name, "edo12")) {
-        std.log.err("Unknown scale: {s}", .{scale_name});
+        std.log.err("Line {}: unknown scale: {s}", .{self.lexer.currentLine, scale_name});
         return error.unknownScale;
     }
     // TODO: proper edo12 and edo19 support
@@ -583,7 +583,7 @@ fn parsePragma(self: *Self) ParseError!void {
     if (findPragmaParser(pragma)) |parser| {
         try parser(self);
     } else {
-        std.log.err("Unknown pragma: {any}", .{pragma});
+        std.log.err("Line {}: unknown pragma: {any}", .{self.lexer.currentLine, pragma});
         return error.unknownPragma;
     }
 
@@ -625,7 +625,7 @@ fn parseAssignment(
         else => {},
     }
     if (t2 != .assign) {
-        std.log.err("Unexpected token when parsing assignment: {any}", .{t2});
+        std.log.err("Line {}: unexpected token when parsing assignment: {any}", .{self.lexer.currentLine, t2});
         return error.unexpectedToken;
     }
 
@@ -697,7 +697,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             return;
         }
         if (tok != .vertical_bar) {
-            std.log.err("Unexpected token while parsing instrument filters: {any}\n", .{tok});
+            std.log.err("Line {}: unexpected token while parsing instrument filters: {any}\n", .{self.lexer.currentLine, tok});
             return error.unexpectedToken;
         }
 
@@ -711,7 +711,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
                     try self.parseInstrumentFilterParams(&flt);
                     try in.add_filter(flt);
                 } else {
-                    std.log.err("Unknown filter: {s}\n", .{id});
+                    std.log.err("Line {}: unknown filter: {s}\n", .{self.lexer.currentLine, id});
                     return error.unexpectedToken;
                 }
             },
@@ -737,7 +737,7 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         const name = switch (tok) {
             .ident => |id| id,
             else => {
-                std.log.err("parseInstrumentFilterParams: unexpected token {any}\n", .{tok});
+                std.log.err("Line {}: parseInstrumentFilterParams: unexpected token {any}\n", .{self.lexer.currentLine, tok});
                 return error.unexpectedToken;
             },
         };
@@ -745,7 +745,7 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
         // Skip .assign.
         const assignTok = self.lexer.pop() orelse return error.unexpectedEof;
         if (assignTok != .assign) {
-            std.log.err("parseInstrumentFilterParams: unexpected token {any}\n", .{assignTok});
+            std.log.err("Line {}: parseInstrumentFilterParams: unexpected token {any}\n", .{self.lexer.currentLine, assignTok});
             return error.unexpectedToken;
         }
 
@@ -759,12 +759,12 @@ fn parseInstrumentFilterParams(self: *Self, flt: *filter.Filter) !void {
             else if (std.mem.eql(u8, i, "true"))
                 setFilterParam(flt, name, false)
             else {
-                std.log.err("Unexpected identifier: {s}", .{i});
+                std.log.err("Line {}: unexpected identifier: {s}", .{self.lexer.currentLine, i});
                 return error.unexpectedToken;
             },
             // TODO handle [-] (negative values).
             else => {
-                std.log.err("Unexpected token: {any}", .{value1});
+                std.log.err("Line {}: unexpected token: {any}", .{self.lexer.currentLine, value1});
                 return error.unexpectedToken;
             },
         };
@@ -806,7 +806,7 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
                         res[i] = n;
                     },
                     else => {
-                        std.log.err("Bad argument for everyList(:) function: {any}", .{it});
+                        std.log.err("Line {}: bad argument for everyList(:) function: {any}", .{self.lexer.currentLine, it});
                         return error.unexpectedToken;
                     },
                 }
@@ -816,7 +816,7 @@ fn parseEvery(self: *Self) ParseError!signal_filter.SignalFilter {
             };
         },
         else => {
-            std.log.err("Bad argument for every(:) function: {any}", .{lit});
+            std.log.err("Line {}: bad argument for every(:) function: {any}", .{self.lexer.currentLine, lit});
             return error.unexpectedToken;
         },
     }
