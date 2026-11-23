@@ -39,6 +39,9 @@ const signalFilterParsers = [_]struct {
 }, .{
     .token = .{ .ident = "eucl'" },
     .parse = parseEuclidianLast,
+}, .{
+    .token = .{ .ident = "bits" },
+    .parse = parseBits,
 } };
 
 const FuncParser = *const fn (self: *Self) ParseError!Literal;
@@ -878,6 +881,39 @@ fn parseEuclidianLast(self: *Self) ParseError!signal_filter.SignalFilter {
         return error.unexpectedEof;
 
     return signal_filter.SignalFilter{ .euclidianLast = try signal_filter.EuclidianLast.init(self.allocator, pulses, steps) };
+}
+
+fn parseBits(self: *Self) ParseError!signal_filter.SignalFilter {
+    // bits 1,2,3
+    self.lexer.drop();
+
+    const lit = try self.parseAtom();
+    defer lit.deinit(self.allocator);
+
+    switch (lit) {
+        .list => |lst| {
+            var res = try self.allocator.alloc(i64, lst.len);
+            errdefer self.allocator.free(res);
+            for (lst, 0..) |it, i| {
+                switch (it) {
+                    .number => |n| {
+                        res[i] = n;
+                    },
+                    else => {
+                        std.log.err("Line {}: bad argument for bits(:) function: {any}", .{self.lexer.currentLine, it});
+                        return error.unexpectedToken;
+                    },
+                }
+            }
+            return signal_filter.SignalFilter{
+                .bits = try signal_filter.Bits.init(res),
+            };
+        },
+        else => {
+            std.log.err("Line {}: bad argument for bits(:) function: {any}", .{self.lexer.currentLine, lit});
+            return error.unexpectedToken;
+        },
+    }
 }
 
 // Function parsers

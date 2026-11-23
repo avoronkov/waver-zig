@@ -7,7 +7,9 @@ pub fn setStructField(obj: anytype, key: []const u8, value: anytype) !void {
                 if (std.mem.eql(u8, field_name, key)) {
                     if (@FieldType(@TypeOf(obj.*), field_name) == @TypeOf(value)) {
                         @field(obj, field_name) = value;
+                        // TODO convert int to float
                     } else {
+                        std.log.err("Cannot assign {any} to field {s} of type {any}", .{value, key, @FieldType(@TypeOf(obj.*), field_name)});
                         return error.valueTypeMismatch;
                     }
                     return;

@@ -319,6 +319,33 @@ test "EuclidianLast [V2] 0 / 4" {
     try std.testing.expectEqualSlices(i64, eu.durs, &.{ 0, 0, 0, 0 });
 }
 
+pub const Bits = struct {
+    bits: []i64,
+    pub fn init(bits: []i64) !Bits {
+        return .{
+            .bits = bits,
+        };
+    }
+
+    pub fn apply(self: Bits, ctx: *Context) bool {
+        const totalBits = self.bits.len;
+        const currentBit = @rem(ctx.bit, self.bits[totalBits - 1]);
+        for (0..totalBits-1) |i| {
+            const it = self.bits[i];
+            if (it == currentBit) {
+                const dur = self.bits[i+1] - it;
+                ctx.duration_bits = dur;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    pub fn deinit(self: *Bits, a: std.mem.Allocator) void {
+        a.free(self.bits);
+    }
+};
+
 pub const SignalFilter = union(enum) {
     every: Every,
     everyList: EveryList,
@@ -327,12 +354,14 @@ pub const SignalFilter = union(enum) {
     lessThan: LessThan,
     euclidianFirst: EuclidianFirst,
     euclidianLast: EuclidianLast,
+    bits: Bits,
 
     pub fn deinit(self: *SignalFilter, a: std.mem.Allocator) void {
         switch (self.*) {
             .everyList => |*l| l.deinit(a),
             .euclidianFirst => |*eu| eu.deinit(a),
             .euclidianLast => |*eu| eu.deinit(a),
+            .bits => |*b| b.deinit(a),
             else => {},
         }
     }
@@ -346,6 +375,7 @@ pub const SignalFilter = union(enum) {
             .moreOrEqual => |v| v.apply(ctx),
             .euclidianFirst => |v| v.apply(ctx),
             .euclidianLast => |v| v.apply(ctx),
+            .bits => |v| v.apply(ctx),
         };
     }
 };
