@@ -33,11 +33,17 @@ pub const SignalFunc = struct {
                 for (l) |v| {
                     switch (v) {
                         .ident => |in| try self.evalFreqAmpDur(a, ctx, in, &res),
-                        else => return error.badInstrument,
+                        else => {
+                            std.log.err("Bad instrument: {f}", .{ v });
+                            return error.badInstrument;
+                        },
                     }
                 }
             },
-            else => return error.badInstrument,
+            else => {
+                std.log.err("Bad instrument: {f}", .{ instVal });
+                return error.badInstrument;
+            },
         }
         return try res.toOwnedSlice(a);
     }

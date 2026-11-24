@@ -68,7 +68,9 @@ fn writeSamples(self: *Self, wave: anytype, frame: i64, frames_to_write: usize) 
                 break :L;
             };
 
-            if (v > 1.0) {
+            if (std.math.isNan(v)) {
+                std.debug.panic("Value is NaN", .{});
+            } else if (v > 1.0) {
                 // std.log.warn("Signal overflow: {}", .{v});
                 v = 1.0;
             } else if (v < -1.0) {

@@ -628,7 +628,7 @@ fn parseAssignment(
         else => {},
     }
     if (t2 != .assign) {
-        std.log.err("Line {}: unexpected token when parsing assignment: {any}", .{self.lexer.currentLine, t2});
+        std.log.err("Line {}: unexpected token when parsing assignment: {f}", .{self.lexer.currentLine, t2});
         return error.unexpectedToken;
     }
 

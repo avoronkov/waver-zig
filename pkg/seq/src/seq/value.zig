@@ -21,6 +21,22 @@ pub const Value = union(enum) {
             else => return,
         }
     }
+
+    pub fn format(self: Value, writer: *std.Io.Writer) !void {
+        switch (self) {
+            .number => |n| try writer.print(".number={}", .{n}),
+            .float => |f| try writer.print(".number={}", .{f}),
+            .str => |s| try writer.print(".str={s}", .{ s.string() }),
+            .ident => |i| try writer.print(".ident={s}", .{i.string()}),
+            .list => |l| {
+                try writer.print(".list=[ ", .{});
+                for (l) |it| {
+                    try writer.print("{f} ", .{it});
+                }
+                try writer.print("]", .{});
+            },
+        }
+    }
 };
 
 pub fn free_value(a: Allocator, value: Value) void {
