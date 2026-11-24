@@ -59,6 +59,9 @@ pub const Exp = struct {
 
     pub fn apply(self: Exp, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
         const v = try chain.value_of(n - 1, t, note);
+        if (v < 0) {
+            return -std.math.pow(f64, -v, self.value);
+        }
         return std.math.pow(f64, v, self.value);
     }
 };
