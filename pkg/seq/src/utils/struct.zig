@@ -15,6 +15,7 @@ pub fn setStructField(obj: anytype, key: []const u8, value: anytype) !void {
                     return;
                 }
             }
+            std.log.err("Field {s} not found in type {any}", .{key, @TypeOf(obj.*)});
             return error.badKey;
         },
         else => @compileError("Unsupported object type: should be *struct"),

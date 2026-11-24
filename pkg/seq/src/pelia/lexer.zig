@@ -47,6 +47,40 @@ pub const Token = union(enum) {
             else => true,
         };
     }
+
+    pub fn format(self: Token, writer: *std.Io.Writer) !void {
+        switch (self) {
+            .colon => try writer.print(".colon", .{}),
+            .plus => try writer.print(".plus", .{}),
+            .minus => try writer.print(".minus", .{}),
+            .multiply => try writer.print(".multiply", .{}),
+            .divide => try writer.print(".divide", .{}),
+            .less => try writer.print(".less", .{}),
+            .more => try writer.print(".more", .{}),
+            .arrow_right => try writer.print(".arrow_right", .{}),
+            .comma => try writer.print(".comma", .{}),
+            .assign => try writer.print(".assign", .{}),
+            .double_assign => try writer.print(".double_assign", .{}),
+            .ampersand => try writer.print(".ampersand", .{}),
+            .at => try writer.print(".at", .{}),
+            .left_curly_bracket => try writer.print(".left_curly_bracket", .{}),
+            .right_curly_bracket => try writer.print(".right_curly_bracket", .{}),
+            .left_square_bracket => try writer.print(".left_square_bracket", .{}),
+            .right_square_bracket => try writer.print(".right_square_bracket", .{}),
+            .vertical_bar => try writer.print(".vertical_bar", .{}),
+            .double_dot => try writer.print(".double_dot", .{}),
+            .underscore => try writer.print(".underscore", .{}),
+            .number => |n| try writer.print(".number={}", .{n}),
+            .float => |f| try writer.print(".float={}", .{f}),
+            .eol => try writer.print(".eol", .{}),
+            .eof => try writer.print(".eof", .{}),
+            .ident => |s| try writer.print(".ident={s}", .{s}),
+            .percent => try writer.print(".pecent", .{}),
+            .double_percent => try writer.print(".double_percent", .{}),
+            .string => |s| try writer.print(".string={s}", .{s}),
+            .comment => |s| try writer.print(".comment={s}", .{s}),
+        }
+    }
 };
 
 const expect = std.testing.expect;

@@ -287,6 +287,13 @@ pub const SwingPan = struct {
     }
 };
 
+pub const Ratio = struct {
+    value: f64,
+    pub fn apply(self: Ratio, chain: Chain, n: i32, t: f64, note: Note) EofError!f64 {
+        return chain.value_of(n - 1, t * self.value, note);
+    }
+};
+
 pub const Filter = union(enum) {
     am: Am,
     exp: Exp,
@@ -295,6 +302,7 @@ pub const Filter = union(enum) {
     delay: Delay,
     adsr: Adsr,
     swingpan: SwingPan,
+    ratio: Ratio,
     code: LispCode,
 
     pub fn deinit(f: *Filter) void {
@@ -305,6 +313,7 @@ pub const Filter = union(enum) {
             .flanger => {},
             .delay => {},
             .adsr => {},
+            .ratio => {},
             .swingpan => {},
             .code => |*c| c.deinit(),
         }
@@ -318,6 +327,7 @@ pub const Filter = union(enum) {
             .flanger => |v| .{ .flanger = v },
             .delay => |v| .{ .delay = v },
             .adsr => |v| .{ .adsr = v },
+            .ratio => |v| .{ .ratio = v },
             .swingpan => |v| .{ .swingpan = v },
             .code => |v| .{ .code = try v.copy(a) },
         };
@@ -331,6 +341,7 @@ pub const Filter = union(enum) {
             .flanger => |v| v.apply(chain, n, t, note),
             .delay => |v| v.apply(chain, n, t, note),
             .adsr => |v| v.apply(chain, n, t, note),
+            .ratio => |v| v.apply(chain, n, t, note),
             .swingpan => |v| v.apply(chain, n, t, note),
             .code => |v| v.apply(chain, n, t, note),
         };
@@ -344,6 +355,7 @@ pub const filters = std.static_string_map.StaticStringMap(Filter).initComptime(.
     .{ "flanger", Filter{ .flanger = Flanger{ .maxShift = 0.02, .freq = 4.0, .abs = false } } },
     .{ "delay", Filter{ .delay = Delay{ .tempo = 120, .int = 1, .times = 1, .fade = 0.5 } } },
     .{ "swingpan", Filter{ .swingpan = SwingPan{ .freq = 0.5, .amp = 1.0 } } },
+    .{ "ratio", Filter{ .ratio = Ratio{ .value = 1.0 } } },
     .{ "adsr", Filter{ .adsr = Adsr{
         .attackLevel = 1,
         .decayLevel = 1,

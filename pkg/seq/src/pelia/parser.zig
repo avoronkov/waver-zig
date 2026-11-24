@@ -353,7 +353,7 @@ fn parseRangeStatement(self: *Self, s: *Signaler, start: i64) !void {
     self.lexer.drop();
     if (self.lexer.pop()) |token| {
         if (token != .double_dot) {
-            std.log.err("Line {}: unexpected token while parsing range statement: {any}\n", .{self.lexer.currentLine, token});
+            std.log.err("Line {}: unexpected token while parsing range statement: {f}\n", .{self.lexer.currentLine, token});
             return error.unexpectedToken;
         }
     } else return error.unexpectedEof;
@@ -654,7 +654,6 @@ fn parseAssignment(
         .string => |filepath| {
             self.lexer.drop();
             const smp = try sample.parseSampleFile(self.allocator, self.io, filepath);
-            errdefer smp.deinit();
             const wi = wave_input.WaveInput{ .sample = smp };
             var inst = Instrument.init(self.allocator, wi);
             errdefer inst.deinit();
@@ -785,6 +784,7 @@ fn setFilterParam(flt: *filter.Filter, key: []const u8, value: anytype) !void {
         .pan => |*v| setStructField(v, key, value),
         .flanger => |*v| setStructField(v, key, value),
         .delay => |*v| setStructField(v, key, value),
+        .ratio => |*v| setStructField(v, key, value),
         .swingpan => |*v| setStructField(v, key, value),
         .adsr => |*v| setStructField(v, key, value),
         .code => {},
