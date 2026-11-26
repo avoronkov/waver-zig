@@ -57,6 +57,14 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .minus => evalOp(a, ctx, opMinus, l[1..]),
         .multiply => evalOp(a, ctx, opMultiply, l[1..]),
         .divide => evalOp(a, ctx, opDivide, l[1..]),
+        .eq => evalOp(a, ctx, opEq, l[1..]),
+        .gt => evalOp(a, ctx, opGt, l[1..]),
+        .ge => evalOp(a, ctx, opGe, l[1..]),
+        .lt => evalOp(a, ctx, opLt, l[1..]),
+        .le => evalOp(a, ctx, opLe, l[1..]),
+        .land => evalOp(a, ctx, opAnd, l[1..]),
+        .lor => evalOp(a, ctx, opOr, l[1..]),
+        .lnot => evalNot(a, ctx, l[1..]),
         .sin => evalSin(a, ctx, l[1..]),
         .cos => evalCos(a, ctx, l[1..]),
         .pow => evalPow(a, ctx, l[1..]),
@@ -236,21 +244,7 @@ fn isPureList(l: []const Literal) bool {
         .str => true,
         .ident => true,
         .list => true,
-        .func => false,
-        .arg => false,
-        .rand => false,
-        .seq => false,
-        .repeat => false,
-        .loop => false,
-        .plus => false,
-        .minus => false,
-        .multiply => false,
-        .divide => false,
-        .sin => false,
-        .cos => false,
-        .pow => false,
-        .value_of => false,
-        .ifelse => false,
+        else => false,
     };
 }
 
@@ -272,6 +266,56 @@ fn opDivide(a: anytype, b: anytype) @TypeOf(a) {
     } else {
         return a / b;
     }
+}
+
+fn opEq(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a == b) 1 else 0;
+}
+
+fn opGt(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a > b) 1 else 0;
+}
+
+fn opGe(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a >= b) 1 else 0;
+}
+
+fn opLt(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a < b) 1 else 0;
+}
+
+fn opLe(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a <= b) 1 else 0;
+}
+
+fn opAnd(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a != 0 and b != 0) 1 else 0;
+}
+
+fn opOr(a: anytype, b: anytype) @TypeOf(a) {
+    return if (a != 0 or b != 0) 1 else 0;
+}
+
+fn truth(val: Value) !bool {
+    return switch (val) {
+        .number => |n| n != 0,
+        .float => |f| f != 0,
+        .ident => |i| blk: {
+            if (std.mem.eql(u8, i.string(), "true")) {
+                break :blk true;
+            } else if (std.mem.eql(u8, i.string(), "false")) {
+                break :blk false;
+            } else {
+                std.log.err("Cannot convert ident {s} to boolean", .{i.string()});
+                return error.badValue;
+            }
+        },
+        .list => |l| l.len > 0,
+        else => {
+            std.log.err("Cannot convert value {any} to boolean", .{val});
+            return error.badValue;
+        },
+    };
 }
 
 fn evalOp(a: Allocator, ctx: *Context, comptime op: anytype, func: []const Literal) EvalError!Value {
@@ -348,6 +392,19 @@ fn evalOpType(comptime T: type, a: Allocator, ctx: *Context, comptime op: anytyp
         }
     }
     return if (T == f64) .{ .float = sum } else .{ .number = sum };
+}
+
+fn evalNot(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
+    if (args.len != 1) {
+        std.log.err("Eval not: {any}", .{args});
+        return error.badValue;
+    }
+    const val = try eval(a, ctx, args[0]);
+    defer val.deinit(a);
+    const res: i64 = if (try truth(val)) 0 else 1;
+    return Value{
+        .number = res,
+    };
 }
 
 fn evalSin(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
@@ -442,25 +499,7 @@ fn evalIf(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
         std.debug.panic("evalIf: {any}", .{args});
     }
     const if_arg = try eval(a, ctx, args[0]);
-    const is_true = switch (if_arg) {
-        .number => |n| n != 0,
-        .float => |f| f != 0,
-        .ident => |i| blk: {
-            if (std.mem.eql(u8, i.string(), "true")) {
-                break :blk true;
-            } else if (std.mem.eql(u8, i.string(), "false")) {
-                break :blk false;
-            } else {
-                std.log.err("Cannot convert ident {s} to boolean", .{i.string()});
-                return error.badValue;
-            }
-        },
-        .list => |l| l.len > 0,
-        else => {
-            std.log.err("Cannot convert value {any} to boolean", .{if_arg});
-            return error.badValue;
-        },
-    };
+    const is_true = try truth (if_arg);
     return eval(a, ctx, args[if (is_true) 1 else 2]);
 }
 

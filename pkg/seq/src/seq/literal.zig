@@ -24,6 +24,14 @@ pub const Literal = union(enum) {
     pow,
     value_of,
     ifelse,
+    eq,
+    gt,
+    ge,
+    lt,
+    le,
+    land,
+    lor,
+    lnot,
 
     pub fn deinit(self: *const Literal, a: Allocator) void {
         switch (self.*) {
@@ -65,6 +73,14 @@ pub const Literal = union(enum) {
             .pow => writer.print(".pow", .{}),
             .value_of => writer.print(".balue_of", .{}),
             .ifelse => writer.print(".if", .{}),
+            .eq => writer.print(".eq", .{}),
+            .gt => writer.print(".gt", .{}),
+            .ge => writer.print(".ge", .{}),
+            .lt => writer.print(".lt", .{}),
+            .le => writer.print(".le", .{}),
+            .land => writer.print(".and", .{}),
+            .lor => writer.print(".or", .{}),
+            .lnot => writer.print(".not", .{}),
         };
     }
 };
@@ -80,44 +96,6 @@ pub fn copyLiteral(a: Allocator, l: Literal) !Literal {
         },
         else => l,
     };
-}
-
-pub fn dumpLiteral(prefix: []const u8, l: Literal) void {
-    const debug = std.log.debug;
-    if (prefix.len > 0) {
-        debug("{s}: ", .{prefix});
-    }
-    switch (l) {
-        .number => |n| debug("{} ", .{n}),
-        .float => |n| debug("{} ", .{n}),
-        .str => |s| debug("\"{s}\" ", .{s.string()}),
-        .ident => |s| debug("{s} ", .{s.string()}),
-        .list => |lst| {
-            debug("[ ", .{});
-            for (lst) |item| {
-                dumpLiteral("", item);
-            }
-            debug("] ", .{});
-        },
-        .func => debug(".func ", .{}),
-        .arg => debug(".arg ", .{}),
-        .rand => debug(".rand ", .{}),
-        .seq => debug(".seq ", .{}),
-        .repeat => debug(".repeat ", .{}),
-        .loop => debug(".loop ", .{}),
-        .plus => debug(".plus ", .{}),
-        .minus => debug(".minus ", .{}),
-        .multiply => debug(".multiply ", .{}),
-        .divide => debug(".divide ", .{}),
-        .sin => debug(".sin ", .{}),
-        .cos => debug(".cos ", .{}),
-        .pow => debug(".pow ", .{}),
-        .value_of => debug(".value_of ", .{}),
-        .ifelse => debug(".if ", .{}),
-    }
-    if (prefix.len > 0) {
-        debug("\n", .{});
-    }
 }
 
 pub fn eql(a: Literal, b: Literal) bool {
@@ -145,6 +123,14 @@ pub fn eql(a: Literal, b: Literal) bool {
         .pow => true,
         .value_of => true,
         .ifelse => true,
+        .eq => true,
+        .le => true,
+        .lt => true,
+        .ge => true,
+        .gt => true,
+        .land => true,
+        .lor => true,
+        .lnot => true,
     };
 }
 

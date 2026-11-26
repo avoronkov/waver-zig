@@ -50,10 +50,10 @@ const funcParsers = [_]struct {
     token: Lexer.Token,
     parse: FuncParser,
 }{
-    .{ .token = .ampersand, .parse = parseRand },
+    .{ .token = .ampersand, .parse = unaryFuncParser(.rand) },
     .{
         .token = Lexer.Token{ .ident = "rand" },
-        .parse = parseRand,
+        .parse = unaryFuncParser(.rand),
     },
     .{ .token = .at, .parse = parseSeq },
     .{
@@ -71,6 +71,38 @@ const funcParsers = [_]struct {
     .{
         .token = Lexer.Token{ .ident = "if" },
         .parse = parseIf,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "eq" },
+        .parse = binaryFuncParser(.eq),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "gt" },
+        .parse = binaryFuncParser(.gt),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "ge" },
+        .parse = binaryFuncParser(.ge),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "lt" },
+        .parse = binaryFuncParser(.lt),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "le" },
+        .parse = binaryFuncParser(.le),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "and" },
+        .parse = binaryFuncParser(.land),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "or" },
+        .parse = binaryFuncParser(.lor),
+    },
+    .{
+        .token = Lexer.Token{ .ident = "not" },
+        .parse = unaryFuncParser(.lnot),
     },
 };
 
@@ -721,7 +753,7 @@ fn parseInstrumentFilters(self: *Self, in: *Instrument) ParseError!void {
             },
             else => {
                 const code = try self.parseAtom();
-                literal.dumpLiteral("Lisp code", code);
+                std.debug.print("Lisp code: {f}", .{code});
                 try in.add_filter(filter.Filter{
                     .code = filter.LispCode.init(self.allocator, code),
                 });
@@ -919,16 +951,6 @@ fn parseBits(self: *Self) ParseError!signal_filter.SignalFilter {
 }
 
 // Function parsers
-fn parseRand(self: *Self) ParseError!Literal {
-    const arg = try self.parseAtom();
-    var literals = try self.allocator.alloc(Literal, 2);
-    literals[0] = .rand;
-    literals[1] = arg;
-    return Literal{
-        .list = literals,
-    };
-}
-
 fn parseSeq(self: *Self) ParseError!Literal {
     const arg = try self.parseAtom();
 
@@ -1005,6 +1027,36 @@ fn parseIf(self: *Self) ParseError!Literal {
     return Literal{
         .list = ls,
     };
+}
+
+fn unaryFuncParser(lit: Literal) fn (self: *Self) ParseError!Literal {
+    return struct {
+        fn parse(self: *Self) ParseError!Literal {
+            const arg1 = try self.parseAtom();
+            var ls = try self.allocator.alloc(Literal, 2);
+            ls[0] = lit;
+            ls[1] = arg1;
+            return Literal{
+                .list = ls,
+            };
+        }
+    }.parse;
+}
+
+fn binaryFuncParser(lit: Literal) fn (self: *Self) ParseError!Literal {
+    return struct {
+        fn parse(self: *Self) ParseError!Literal {
+            const arg1 = try self.parseAtom();
+            const arg2 = try self.parseAtom();
+            var ls = try self.allocator.alloc(Literal, 3);
+            ls[0] = lit;
+            ls[1] = arg1;
+            ls[2] = arg2;
+            return Literal{
+                .list = ls,
+            };
+        }
+    }.parse;
 }
 
 fn findSignalFilterParser(tok: Lexer.Token) ?SignalFilterParser {

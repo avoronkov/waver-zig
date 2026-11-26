@@ -1,4 +1,4 @@
-fact n = if n
+fact n = if gt n 0
             [* n fact [- n 1]]
             1
 
