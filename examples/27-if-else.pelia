@@ -1,0 +1,3 @@
+I = sine
+
+:4 I if false A3 C4

@@ -23,6 +23,7 @@ pub const Literal = union(enum) {
     cos,
     pow,
     value_of,
+    ifelse,
 
     pub fn deinit(self: *const Literal, a: Allocator) void {
         switch (self.*) {
@@ -34,6 +35,37 @@ pub const Literal = union(enum) {
             },
             else => return,
         }
+    }
+
+    pub fn format(self: Literal, writer: *std.Io.Writer) !void {
+        try switch (self) {
+            .number => |n| writer.print(".number={}", .{n}),
+            .float => |n| writer.print(".float={}", .{n}),
+            .str => |s| writer.print(".str={s}", .{s.string()}),
+            .ident => |i| writer.print(".ident={s}", .{i.string()}),
+            .list => |l| {
+                try writer.print(".list=[ ", .{});
+                for (l) |it| {
+                    try writer.print("{f} ", .{it});
+                }
+                try writer.print("]", .{});
+            },
+            .func => writer.print(".func", .{}),
+            .arg => writer.print(".arg", .{}),
+            .rand => writer.print(".rand", .{}),
+            .seq => writer.print(".seq", .{}),
+            .repeat => writer.print(".repeat", .{}),
+            .loop => writer.print(".loop", .{}),
+            .plus => writer.print(".plus", .{}),
+            .minus => writer.print(".minus", .{}),
+            .multiply => writer.print(".multiply", .{}),
+            .divide => writer.print(".divide", .{}),
+            .sin => writer.print(".sin", .{}),
+            .cos => writer.print(".cos", .{}),
+            .pow => writer.print(".pow", .{}),
+            .value_of => writer.print(".balue_of", .{}),
+            .ifelse => writer.print(".if", .{}),
+        };
     }
 };
 
@@ -81,6 +113,7 @@ pub fn dumpLiteral(prefix: []const u8, l: Literal) void {
         .cos => debug(".cos ", .{}),
         .pow => debug(".pow ", .{}),
         .value_of => debug(".value_of ", .{}),
+        .ifelse => debug(".if ", .{}),
     }
     if (prefix.len > 0) {
         debug("\n", .{});
@@ -111,6 +144,7 @@ pub fn eql(a: Literal, b: Literal) bool {
         .cos => true,
         .pow => true,
         .value_of => true,
+        .ifelse => true,
     };
 }
 

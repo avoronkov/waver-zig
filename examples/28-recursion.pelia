@@ -1,0 +1,9 @@
+fact n = if n
+            [* n fact [- n 1]]
+            1
+
+I = sine
+
+:4 I fact 4 3
+
+stop 2

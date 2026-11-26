@@ -12,14 +12,17 @@ const Literal = literal.Literal;
 const EvalError = error{ emptyList, badValue, OutOfMemory };
 
 pub fn eval(a: Allocator, ctx: *Context, expr: Literal) EvalError!Value {
-    std.log.debug("eval: {any}", .{ expr });
+    std.log.debug("eval: {f}", .{ expr });
     return switch (expr) {
         .number => |v| Value{ .number = v },
         .float => |v| Value{ .float = v },
         .str => |v| Value{ .str = v },
         .ident => |v| evalIdent(a, ctx, v),
         .list => |l| evalList(a, ctx, l),
-        else => error.badValue,
+        else => {
+            std.log.err("Cannot eval expr: {f}", .{ expr });
+            return error.badValue;
+        },
     };
 }
 
@@ -51,12 +54,14 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .repeat => evalRepeat(a, ctx, l[1..]),
         .loop => evalLoop(a, ctx, l[1..]),
         .plus => evalOp(a, ctx, opPlus, l[1..]),
+        .minus => evalOp(a, ctx, opMinus, l[1..]),
         .multiply => evalOp(a, ctx, opMultiply, l[1..]),
         .divide => evalOp(a, ctx, opDivide, l[1..]),
         .sin => evalSin(a, ctx, l[1..]),
         .cos => evalCos(a, ctx, l[1..]),
         .pow => evalPow(a, ctx, l[1..]),
         .value_of => evalValueOf(a, ctx, l[1..]),
+        .ifelse => evalIf(a, ctx, l[1..]),
         else => blk: {
             var res: std.ArrayListUnmanaged(Value) = .empty;
             errdefer {
@@ -123,7 +128,10 @@ fn evalRand(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value 
             const i: usize = @intCast(rand.random.int31n(@intCast(lres.len)));
             return value.copy_value(a, lres[i]);
         },
-        else => return error.badValue,
+        else => {
+            std.log.err("Cannot choose random value from {f}", .{rand_arg});
+            return error.badValue;
+        },
     }
 }
 
@@ -152,7 +160,10 @@ fn evalSeq(a: Allocator, ctx: *Context, func: []const Literal) EvalError!Value {
             ctx.setSeqCounter(counter, idx + 1);
             return try value.copy_value(a, lres[idx]);
         },
-        else => return error.badValue,
+        else => {
+            std.log.err("Cannot select next sequence element from {f}", .{evaluated});
+            return error.badValue;
+        },
     }
 }
 
@@ -168,7 +179,10 @@ fn evalRepeat(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
     const repeat = try eval(a, ctx, l[1]);
     const repeatSize = switch (repeat) {
         .number => |n| n,
-        else => return error.badValue,
+        else => {
+            std.log.err("Repeat bad arg: {f}", .{repeat});
+            return error.badValue;  
+        },
     };
     if (prev) |prev_value| {
         if (i >= repeatSize) {
@@ -194,7 +208,10 @@ fn evalLoop(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
     const loop_size_value = try eval(a, ctx, l[1]);
     const loop_size = switch (loop_size_value) {
         .number => |n| n,
-        else => return error.badValue,
+        else => {
+            std.log.err("Loop bad arg: {f}", .{loop_size_value});
+            return error.badValue;
+        },
     };
 
     if (ctx.getLoopSize(counter) < loop_size) {
@@ -207,7 +224,6 @@ fn evalLoop(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         // get value from context
         return ctx.getLoopValue(counter);
     }
-    return error.badValue;
 }
 
 fn isPureList(l: []const Literal) bool {
@@ -234,11 +250,16 @@ fn isPureList(l: []const Literal) bool {
         .cos => false,
         .pow => false,
         .value_of => false,
+        .ifelse => false,
     };
 }
 
 fn opPlus(a: anytype, b: anytype) @TypeOf(a) {
     return a + b;
+}
+
+fn opMinus(a: anytype, b: anytype) @TypeOf(a) {
+    return a - b;
 }
 
 fn opMultiply(a: anytype, b: anytype) @TypeOf(a) {
@@ -278,12 +299,19 @@ fn evalOpType(comptime T: type, a: Allocator, ctx: *Context, comptime op: anytyp
         switch (val) {
             .float => |f| if (T == f64) {
                 sum = op(sum, f);
-            } else return error.badValue,
+            } else {
+                std.log.err("Cannot operate with non-float type: {f}", .{val});
+                 return error.badValue;   
+            },
             .number => |n| if (T == i64) {
                 sum = op(sum, n);
-            } else return error.badValue,
+            } else {
+                std.log.err("Cannot operate with non-number type: {f}", .{val});
+                return error.badValue;
+            },
             .list => |l| {
                 if (args.len != 1) {
+                    std.log.err("List length != 1: {any}", .{args});
                     return error.badValue;
                 }
                 var r = try a.alloc(Value, l.len);
@@ -292,16 +320,31 @@ fn evalOpType(comptime T: type, a: Allocator, ctx: *Context, comptime op: anytyp
                     switch (v) {
                         .float => |f| if (T == f64) {
                             r[i] = .{ .float = op(first, f) };
-                        } else return error.badValue,
+                        } else {
+                            std.log.err("Bad argument (not float): {f}", .{v});
+                            return error.badValue;  
+                        },
                         .number => |n| if (T == i64) {
                             r[i] = .{ .number = op(first, n) };
-                        } else return error.badValue,
-                        else => return error.badValue,
+                        } else {
+                            std.log.err("Bad argument (not number): {f}", .{v});
+                            return error.badValue;
+                        },
+                        else => {
+                            std.log.err("Eval op failed on first={} args={any} with bad argument: {f} [{}]", .{first, args, v, i});
+                            for (args) |arg| {
+                                std.log.err("- arg={f}", .{arg});
+                            }
+                            return error.badValue;
+                        },
                     }
                 }
                 return .{ .list = r };
             },
-            else => return error.badValue,
+            else => {
+                std.log.err("Cannot operate with {f}", .{val});
+                return error.badValue;  
+            },
         }
     }
     return if (T == f64) .{ .float = sum } else .{ .number = sum };
@@ -309,13 +352,17 @@ fn evalOpType(comptime T: type, a: Allocator, ctx: *Context, comptime op: anytyp
 
 fn evalSin(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
     if (args.len != 1) {
+        std.log.err("Eval sin: {any}", .{args});
         return error.badValue;
     }
     const val = try eval(a, ctx, args[0]);
     defer value.free_value(a, val);
     return switch (val) {
         .float => |f| .{ .float = std.math.sin(f) },
-        else => error.badValue,
+        else => {
+            std.log.err("Eval sin: {f}", .{val});
+            return error.badValue;
+        },
     };
 }
 
@@ -388,6 +435,33 @@ fn evalValueOf(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Val
         std.log.err("Context.chain is not defined", .{});
         return error.badValue;
     }
+}
+
+fn evalIf(a: Allocator, ctx: *Context, args: []const Literal) EvalError!Value {
+    if (args.len != 3) {
+        std.debug.panic("evalIf: {any}", .{args});
+    }
+    const if_arg = try eval(a, ctx, args[0]);
+    const is_true = switch (if_arg) {
+        .number => |n| n != 0,
+        .float => |f| f != 0,
+        .ident => |i| blk: {
+            if (std.mem.eql(u8, i.string(), "true")) {
+                break :blk true;
+            } else if (std.mem.eql(u8, i.string(), "false")) {
+                break :blk false;
+            } else {
+                std.log.err("Cannot convert ident {s} to boolean", .{i.string()});
+                return error.badValue;
+            }
+        },
+        .list => |l| l.len > 0,
+        else => {
+            std.log.err("Cannot convert value {any} to boolean", .{if_arg});
+            return error.badValue;
+        },
+    };
+    return eval(a, ctx, args[if (is_true) 1 else 2]);
 }
 
 fn valueToLiteral(a: Allocator, val: value.Value) !Literal {

@@ -68,6 +68,10 @@ const funcParsers = [_]struct {
         .token = Lexer.Token{ .ident = "loop" },
         .parse = parseLoop,
     },
+    .{
+        .token = Lexer.Token{ .ident = "if" },
+        .parse = parseIf,
+    },
 };
 
 const atoms = [_]struct {
@@ -203,13 +207,8 @@ pub fn parse(self: *Self) !void {
 }
 
 fn nextStatementType(self: *Self) !StatementType {
-    const token = while (self.lexer.top()) |tok| {
-        if (tok == .eol) {
-            self.lexer.drop();
-        } else {
-            break tok;
-        }
-    } else return error.unexpectedEof;
+    self.skipEols();
+    const token = if (self.lexer.top()) |tok| tok else .eof;
 
     if (token == .eof) {
         return .eof;
@@ -681,10 +680,13 @@ fn parseFunctionAssignment(self: *Self, name: []const u8, argname: []const u8) !
     if (t3 != .assign) {
         return error.unexpectedToken;
     }
+    const name_key = try self.prog.allocator.dupe(u8, name);
+    // Put fake function in a map to make recursion work.
+    try self.prog.functions.put(self.prog.allocator, name_key, .func);
     const raw = try self.parseAtom();
     defer raw.deinit(self.allocator);
     const body = try literal.substitute(self.allocator, raw, .{ .ident = try primitives.Ident.init(argname) }, .arg);
-    try self.prog.functions.put(self.prog.allocator, try self.prog.allocator.dupe(u8, name), body);
+    try self.prog.functions.put(self.prog.allocator, name_key, body);
 }
 
 // sig = <signaler>
@@ -975,6 +977,33 @@ fn parseLoop(self: *Self) ParseError!Literal {
 
     return Literal{
         .list = literals,
+    };
+}
+
+fn skipEols(self: *Self) void {
+    while (self.lexer.top()) |tok| {   
+        if (tok == .eol) {
+            self.lexer.drop();
+        } else {
+            break;
+        }
+    }
+}
+
+fn parseIf(self: *Self) ParseError!Literal {
+    const cond = try self.parseAtom();
+    self.skipEols();
+    const iftrue = try self.parseAtom();
+    self.skipEols();
+    const iffalse = try self.parseAtom();
+
+    var ls = try self.allocator.alloc(Literal, 4);
+    ls[0] = .ifelse;
+    ls[1] = cond;
+    ls[2] = iftrue;
+    ls[3] = iffalse;
+    return Literal{
+        .list = ls,
     };
 }
 

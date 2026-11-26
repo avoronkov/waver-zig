@@ -18,6 +18,8 @@ Zig implementation of a musical programming language Pelia.
 
 [X] embedeb samples
 
-[ ] srand pragma
+[X] srand pragma
 
 [ ] noise waveform
+
+[ ] concat
