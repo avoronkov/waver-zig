@@ -4,6 +4,8 @@ const Beeper = @import("./beeper.zig");
 const rand = @import("./seq/rand.zig");
 const Args = @import("./args.zig");
 
+pub const waveforms = @import("./waveform.zig").waveforms;
+
 const Self = @This();
 
 allocator: std.mem.Allocator,

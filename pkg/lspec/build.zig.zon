@@ -1,0 +1,19 @@
+.{
+    .name = .lspec,
+    .version = "0.0.0",
+    .fingerprint = 0x7baaa5737167a927, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.17.1",
+    .dependencies = .{
+        .seq = .{
+            .path = "../seq",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}
