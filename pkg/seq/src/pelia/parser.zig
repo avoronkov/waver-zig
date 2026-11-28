@@ -42,6 +42,9 @@ const signalFilterParsers = [_]struct {
 }, .{
     .token = .{ .ident = "bits" },
     .parse = parseBits,
+}, .{
+    .token = .{ .ident = "when" },
+    .parse = parseWhen,
 } };
 
 const FuncParser = *const fn (self: *Self) ParseError!Literal;
@@ -104,6 +107,10 @@ const funcParsers = [_]struct {
         .token = Lexer.Token{ .ident = "not" },
         .parse = unaryFuncParser(.lnot),
     },
+    .{
+        .token = Lexer.Token{ .ident = "rem" },
+        .parse = binaryFuncParser(.rem),
+    },
 };
 
 const atoms = [_]struct {
@@ -125,6 +132,10 @@ const atoms = [_]struct {
     .{
         .token = Lexer.Token{ .ident = "value_of" },
         .atom = .value_of,
+    },
+    .{
+        .token = Lexer.Token{ .ident = "bit" },
+        .atom = .bit,
     },
 };
 
@@ -948,6 +959,15 @@ fn parseBits(self: *Self) ParseError!signal_filter.SignalFilter {
             return error.unexpectedToken;
         },
     }
+}
+
+fn parseWhen(self: *Self) ParseError!signal_filter.SignalFilter {
+    // when not rem bit 4
+    self.lexer.drop();
+    const cond = try self.parseAtom();
+    return signal_filter.SignalFilter{
+        .when = try signal_filter.When.init(self.allocator, cond),
+    };
 }
 
 // Function parsers

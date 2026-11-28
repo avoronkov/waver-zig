@@ -19,6 +19,7 @@ pub fn eval(a: Allocator, ctx: *Context, expr: Literal) EvalError!Value {
         .str => |v| Value{ .str = v },
         .ident => |v| evalIdent(a, ctx, v),
         .list => |l| evalList(a, ctx, l),
+        .bit => Value{ .number = ctx.bit },
         else => {
             std.log.err("Cannot eval expr: {f}", .{ expr });
             return error.badValue;
@@ -57,6 +58,7 @@ fn evalList(a: Allocator, ctx: *Context, l: []const Literal) EvalError!Value {
         .minus => evalOp(a, ctx, opMinus, l[1..]),
         .multiply => evalOp(a, ctx, opMultiply, l[1..]),
         .divide => evalOp(a, ctx, opDivide, l[1..]),
+        .rem => evalOp(a, ctx, opRem, l[1..]),
         .eq => evalOp(a, ctx, opEq, l[1..]),
         .gt => evalOp(a, ctx, opGt, l[1..]),
         .ge => evalOp(a, ctx, opGe, l[1..]),
@@ -267,6 +269,9 @@ fn opDivide(a: anytype, b: anytype) @TypeOf(a) {
         return a / b;
     }
 }
+fn opRem(a: anytype, b: anytype) @TypeOf(a) {
+    return @rem(a, b);
+}
 
 fn opEq(a: anytype, b: anytype) @TypeOf(a) {
     return if (a == b) 1 else 0;
@@ -296,7 +301,7 @@ fn opOr(a: anytype, b: anytype) @TypeOf(a) {
     return if (a != 0 or b != 0) 1 else 0;
 }
 
-fn truth(val: Value) !bool {
+pub fn truth(val: Value) !bool {
     return switch (val) {
         .number => |n| n != 0,
         .float => |f| f != 0,

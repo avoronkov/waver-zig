@@ -19,6 +19,7 @@ pub const Literal = union(enum) {
     minus,
     multiply,
     divide,
+    rem,
     sin,
     cos,
     pow,
@@ -32,6 +33,7 @@ pub const Literal = union(enum) {
     land,
     lor,
     lnot,
+    bit,
 
     pub fn deinit(self: *const Literal, a: Allocator) void {
         switch (self.*) {
@@ -68,6 +70,7 @@ pub const Literal = union(enum) {
             .minus => writer.print(".minus", .{}),
             .multiply => writer.print(".multiply", .{}),
             .divide => writer.print(".divide", .{}),
+            .rem => writer.print(".rem", .{}),
             .sin => writer.print(".sin", .{}),
             .cos => writer.print(".cos", .{}),
             .pow => writer.print(".pow", .{}),
@@ -81,6 +84,7 @@ pub const Literal = union(enum) {
             .land => writer.print(".and", .{}),
             .lor => writer.print(".or", .{}),
             .lnot => writer.print(".not", .{}),
+            .bit => writer.print(".bit", .{}),
         };
     }
 };
@@ -108,29 +112,7 @@ pub fn eql(a: Literal, b: Literal) bool {
         .str => std.mem.eql(u8, a.str.string(), b.str.string()),
         .ident => std.mem.eql(u8, a.ident.string(), b.ident.string()),
         .list => std.debug.panic("NIY", .{}),
-        .func => true,
-        .arg => true,
-        .rand => true,
-        .seq => true,
-        .repeat => true,
-        .loop => true,
-        .plus => true,
-        .minus => true,
-        .multiply => true,
-        .divide => true,
-        .sin => true,
-        .cos => true,
-        .pow => true,
-        .value_of => true,
-        .ifelse => true,
-        .eq => true,
-        .le => true,
-        .lt => true,
-        .ge => true,
-        .gt => true,
-        .land => true,
-        .lor => true,
-        .lnot => true,
+        else => true,
     };
 }
 

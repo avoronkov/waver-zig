@@ -1,5 +1,7 @@
 const std = @import("std");
 const Context = @import("./context.zig");
+const Literal = @import("./literal.zig").Literal;
+const lisp = @import("./lisp.zig");
 
 pub const Every = struct {
     n: i64,
@@ -346,6 +348,34 @@ pub const Bits = struct {
     }
 };
 
+pub const When = struct {
+    allocator: std.mem.Allocator,
+    cond: Literal,
+
+    pub fn init(a: std.mem.Allocator, lit: Literal) !When {
+        return .{
+            .allocator = a,
+            .cond = lit,
+        };
+    }
+
+    pub fn apply(self: When, ctx: *Context) bool {
+        const result = lisp.eval(self.allocator, ctx, self.cond) catch |err| {
+            std.log.err("When `{f}` failed: {t}", .{self.cond, err});
+            return false;
+        };
+        defer result.deinit(self.allocator);
+        return lisp.truth(result) catch |err| {
+            std.log.err("When `{f}` got incorrect result: {f} ({t})", .{self.cond, result, err});
+            return false;
+        };
+    }
+
+    pub fn deinit(self: *When, a: std.mem.Allocator) void {
+        self.cond.deinit(a);
+    }
+};
+
 pub const SignalFilter = union(enum) {
     every: Every,
     everyList: EveryList,
@@ -355,6 +385,7 @@ pub const SignalFilter = union(enum) {
     euclidianFirst: EuclidianFirst,
     euclidianLast: EuclidianLast,
     bits: Bits,
+    when: When,
 
     pub fn deinit(self: *SignalFilter, a: std.mem.Allocator) void {
         switch (self.*) {
@@ -362,6 +393,7 @@ pub const SignalFilter = union(enum) {
             .euclidianFirst => |*eu| eu.deinit(a),
             .euclidianLast => |*eu| eu.deinit(a),
             .bits => |*b| b.deinit(a),
+            .when => |*w| w.deinit(a),
             else => {},
         }
     }
@@ -376,6 +408,7 @@ pub const SignalFilter = union(enum) {
             .euclidianFirst => |v| v.apply(ctx),
             .euclidianLast => |v| v.apply(ctx),
             .bits => |v| v.apply(ctx),
+            .when => |v| v.apply(ctx),
         };
     }
 };

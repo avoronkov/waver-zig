@@ -1,0 +1,4 @@
+I = sine
+
+when not rem bit 4  I C4 3 4
+when rem bit 4      I E4 3 1
